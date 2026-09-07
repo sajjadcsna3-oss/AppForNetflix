@@ -275,6 +275,8 @@ final class AuthStore: ObservableObject {
             return userFacingDescription(for: error)
         case .requiresRecentLogin:
             return userFacingDescription(for: error)
+        case .keychainError:
+            return userFacingDescription(for: error)
         default:
             return userFacingDescription(for: error)
         }
@@ -288,10 +290,12 @@ final class AuthStore: ObservableObject {
     }
 
     private static func logFirebaseError(_ error: NSError, operation: String) {
+#if DEBUG
         print(
             "🔥 Firebase \(operation) Error "
             + "[Domain: \(error.domain), Code: \(error.code)]: "
-            + error.localizedDescription
+            + "\(error.localizedDescription) | UserInfo: \(error.userInfo)"
         )
+#endif
     }
 }

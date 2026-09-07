@@ -10,30 +10,6 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundlePackageType</key>
-	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>PrivacyPolicyURL</key>
-	<string>$(PRIVACY_POLICY_URL)</string>
-	<key>TermsOfServiceURL</key>
-	<string>$(TERMS_OF_SERVICE_URL)</string>
-	<key>TMDBAPIKey</key>
-	<string>$(TMDB_API_KEY)</string>
-	<key>WatchmodeAPIKey</key>
-	<string>$(WATCHMODE_API_KEY)</string>
-	<key>StoreKitWeeklyProductID</key>
-	<string>$(STOREKIT_WEEKLY_PRODUCT_ID)</string>
-	<key>StoreKitMonthlyProductID</key>
-	<string>$(STOREKIT_MONTHLY_PRODUCT_ID)</string>
-	<key>StoreKitAnnualProductID</key>
-	<string>$(STOREKIT_ANNUAL_PRODUCT_ID)</string>
-	<key>StoreKitLifetimeProductID</key>
-	<string>$(STOREKIT_LIFETIME_PRODUCT_ID)</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -72,9 +48,33 @@
 		<string>zh-Hans</string>
 		<string>zh-Hant</string>
 	</array>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>PrivacyPolicyURL</key>
+	<string>$(PRIVACY_POLICY_URL)</string>
+	<key>StoreKitAnnualProductID</key>
+	<string>$(STOREKIT_ANNUAL_PRODUCT_ID)</string>
+	<key>StoreKitLifetimeProductID</key>
+	<string>$(STOREKIT_LIFETIME_PRODUCT_ID)</string>
+	<key>StoreKitMonthlyProductID</key>
+	<string>$(STOREKIT_MONTHLY_PRODUCT_ID)</string>
+	<key>StoreKitWeeklyProductID</key>
+	<string>$(STOREKIT_WEEKLY_PRODUCT_ID)</string>
+	<key>TMDBAPIKey</key>
+	<string>$(TMDB_API_KEY)</string>
+	<key>TermsOfServiceURL</key>
+	<string>$(TERMS_OF_SERVICE_URL)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>PollerOne-Regular.ttf</string>
 	</array>
+	<key>WatchmodeAPIKey</key>
+	<string>$(WATCHMODE_API_KEY)</string>
 </dict>
 </plist>

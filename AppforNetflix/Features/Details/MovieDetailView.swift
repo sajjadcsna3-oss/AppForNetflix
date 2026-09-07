@@ -7,6 +7,7 @@ struct MovieDetailView: View {
 
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var storeKit: StoreKitService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -15,6 +16,7 @@ struct MovieDetailView: View {
     @State private var cast: [CastMember] = []
     @State private var similar: [Movie] = []
     @State private var isLoadingExtras = true
+    @State private var isShowingSubscription = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -110,8 +112,12 @@ struct MovieDetailView: View {
                                 .buttonStyle(.plain)
 
                                 Button {
-                                    watchlistViewModel.toggle(movie)
-                                    isSaved = watchlistViewModel.isSaved(movie)
+                                    if storeKit.isConfigured && !settings.isPremium {
+                                        isShowingSubscription = true
+                                    } else {
+                                        watchlistViewModel.toggle(movie)
+                                        isSaved = watchlistViewModel.isSaved(movie)
+                                    }
                                 } label: {
                                     Label(
                                         isSaved
@@ -274,10 +280,15 @@ struct MovieDetailView: View {
         )
         .onAppear {
             isSaved = watchlistViewModel.isSaved(movie)
-            recentViewModel.record(movie)
+            if !storeKit.isConfigured || settings.isPremium {
+                recentViewModel.record(movie)
+            }
         }
         .task(id: settings.languageCode) {
             await loadExtras()
+        }
+        .sheet(isPresented: $isShowingSubscription) {
+            SubscriptionView()
         }
     }
 

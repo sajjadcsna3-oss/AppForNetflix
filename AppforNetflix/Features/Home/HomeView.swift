@@ -4,6 +4,7 @@ struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var auth: AuthStore
+    @EnvironmentObject private var storeKit: StoreKitService
     @Environment(\.modelContext) private var modelContext
     
     @StateObject private var viewModel = HomeViewModel()
@@ -82,6 +83,12 @@ struct HomeView: View {
         .onChange(of: searchText) {
             if !searchText.isEmpty {
                 seeAllList = nil
+            }
+        }
+        .onChange(of: settings.isPremium) {
+            guard storeKit.isConfigured, !settings.isPremium else { return }
+            if router.selectedSection == .watchlist || router.selectedSection == .recent {
+                router.select(.home)
             }
         }
     }
@@ -208,12 +215,17 @@ struct HomeView: View {
                         movie: featured,
                         onWatch: { router.showDetails(for: featured) },
                         onToggleWatchlist: {
-                            watchlistViewModel.toggle(featured)
+                            if storeKit.isConfigured && !settings.isPremium {
+                                router.showSubscription()
+                            } else {
+                                watchlistViewModel.toggle(featured)
+                            }
                         },
                         onInfo: {
                             router.showDetails(for: featured)
                         },
-                        isSaved: watchlistViewModel.isSaved(featured)
+                        isSaved: (!storeKit.isConfigured || settings.isPremium)
+                            && watchlistViewModel.isSaved(featured)
                     )
                     .padding(.horizontal, 24)
                 }

@@ -16,24 +16,6 @@ struct SettingsView: View {
 
     private let languages = AppLanguage.supportedCodes
 
-    private let videoQualities = [
-        "Auto (4K)",
-        "4K",
-        "1080p",
-        "720p",
-        "480p",
-        "Data Saver"
-    ]
-
-    private let subtitleOptions = [
-        "Off",
-        "English",
-        "Arabic",
-        "Urdu",
-        "French",
-        "Spanish"
-    ]
-
     var body: some View {
         ScrollView {
             VStack(
@@ -85,47 +67,6 @@ struct SettingsView: View {
                                 "\(Country.find(name).flag) \(L10n.string(name, languageCode: settings.languageCode))"
                             },
                             selection: $settings.region
-                        )
-                    }
-                }
-
-                section("PLAYBACK") {
-                    settingsRow(
-                        title: "Video Quality",
-                        subtitle: L10n.string("Maximum streaming quality", languageCode: settings.languageCode)
-                    ) {
-                        SettingsDropdown(
-                            items: videoQualities,
-                            label: {
-                                L10n.string($0, languageCode: settings.languageCode)
-                            },
-                            selection: $settings.videoQuality
-                        )
-                    }
-
-                    rowDivider
-
-                    settingsRow(
-                        title: "Autoplay",
-                        subtitle: L10n.string("Play next episode automatically", languageCode: settings.languageCode)
-                    ) {
-                        CustomRedSwitch(
-                            isOn: $settings.autoplayTrailers
-                        )
-                    }
-
-                    rowDivider
-
-                    settingsRow(
-                        title: "Subtitles",
-                        subtitle: L10n.string("Default subtitle language", languageCode: settings.languageCode)
-                    ) {
-                        SettingsDropdown(
-                            items: subtitleOptions,
-                            label: {
-                                L10n.string($0, languageCode: settings.languageCode)
-                            },
-                            selection: $settings.subtitles
                         )
                     }
                 }

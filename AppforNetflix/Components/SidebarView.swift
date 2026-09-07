@@ -41,7 +41,15 @@ struct SidebarView: View {
 
     private func sidebarRow(_ section: SidebarSection) -> some View {
         let isSelected = router.selectedSection == section && router.selectedGenre == nil
-        return Button { router.select(section) } label: {
+        let isPremiumSection = section == .watchlist || section == .recent
+        let isLocked = storeKit.isConfigured && !settings.isPremium && isPremiumSection
+        return Button {
+            if isLocked {
+                router.showSubscription()
+            } else {
+                router.select(section)
+            }
+        } label: {
             HStack(spacing: 10) {
                 AppIconView(assetName: section.assetName, fallbackSymbol: section.fallbackSymbol)
                     .frame(width: 16, height: 16)

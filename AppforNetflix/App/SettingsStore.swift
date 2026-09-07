@@ -5,9 +5,6 @@ import Combine
 final class SettingsStore: ObservableObject {
     @Published var region: String { didSet { defaults.set(region, forKey: Keys.region) } }
     @Published var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
-    @Published var videoQuality: String { didSet { defaults.set(videoQuality, forKey: Keys.videoQuality) } }
-    @Published var subtitles: String { didSet { defaults.set(subtitles, forKey: Keys.subtitles) } }
-    @Published var autoplayTrailers: Bool { didSet { defaults.set(autoplayTrailers, forKey: Keys.autoplay) } }
     /// A display cache updated only from verified StoreKit entitlements.
     @Published private(set) var isPremium: Bool = false
     @Published var userName: String { didSet { defaults.set(userName, forKey: Keys.userName) } }
@@ -25,9 +22,6 @@ final class SettingsStore: ObservableObject {
     private enum Keys {
         static let region = "settings.region"
         static let language = "settings.language"
-        static let videoQuality = "settings.videoQuality"
-        static let subtitles = "settings.subtitles"
-        static let autoplay = "settings.autoplayTrailers"
         static let userName = "settings.userName"
         static let userEmail = "settings.userEmail"
         static let connectedPlatforms = "settings.connectedPlatforms"
@@ -41,9 +35,6 @@ final class SettingsStore: ObservableObject {
         self.language = AppLanguage.normalizedCode(
             defaults.string(forKey: Keys.language) ?? "en"
         )
-        self.videoQuality = defaults.string(forKey: Keys.videoQuality) ?? "Auto (4K)"
-        self.subtitles = defaults.string(forKey: Keys.subtitles) ?? "Off"
-        self.autoplayTrailers = defaults.object(forKey: Keys.autoplay) as? Bool ?? true
         self.userName = defaults.string(forKey: Keys.userName) ?? ""
         self.userEmail = defaults.string(forKey: Keys.userEmail) ?? ""
 

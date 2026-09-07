@@ -47,21 +47,14 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    // MARK: - Fallback Price
-
-    var fallbackPrice: String {
+    // Used only to preserve the paywall preview on developer builds that have
+    // no product identifiers. Configured builds always display StoreKit prices.
+    var previewPrice: String {
         switch self {
-        case .weekly:
-            return "$3.99"
-
-        case .monthly:
-            return "$7.99"
-
-        case .annual:
-            return "$29.99"
-
-        case .lifetime:
-            return "$39.99"
+        case .weekly: "$3.99"
+        case .monthly: "$7.99"
+        case .annual: "$29.99"
+        case .lifetime: "$39.99"
         }
     }
 

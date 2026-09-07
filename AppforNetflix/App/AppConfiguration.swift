@@ -18,8 +18,15 @@ enum AppConfiguration {
         return trimmed
     }
 
-    static var privacyPolicyURL: URL? { URL(string: string(for: "PrivacyPolicyURL")) }
-    static var termsOfServiceURL: URL? { URL(string: string(for: "TermsOfServiceURL")) }
+    static var privacyPolicyURL: URL? { publicHTTPSURL(for: "PrivacyPolicyURL") }
+    static var termsOfServiceURL: URL? { publicHTTPSURL(for: "TermsOfServiceURL") }
     static var tmdbAPIKey: String { string(for: Key.tmdbAPIKey) }
     static var watchmodeAPIKey: String { string(for: Key.watchmodeAPIKey) }
+
+    private static func publicHTTPSURL(for key: String) -> URL? {
+        guard let url = URL(string: string(for: key)),
+              url.scheme?.lowercased() == "https",
+              url.host != nil else { return nil }
+        return url
+    }
 }

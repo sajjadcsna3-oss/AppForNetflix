@@ -220,6 +220,7 @@ struct SubscriptionView: View {
                 .buttonStyle(.plain)
                 .font(Theme.Font.body(13))
                 .foregroundStyle(Theme.accent)
+                .disabled(storeKit.isLoading)
             }
             .padding(.bottom, 8)
 
@@ -265,7 +266,7 @@ struct SubscriptionView: View {
                 )
             }
             .buttonStyle(.plain)
-            .disabled(storeKit.isLoading)
+            .disabled(storeKit.isLoading || selectedProduct == nil)
 
             // MARK: Terms & Privacy
 
@@ -338,7 +339,7 @@ struct SubscriptionView: View {
                         .font(Theme.Font.body(15))
                         .fontWeight(.bold)
 
-                        if let badge = plan.badge {
+                        if let badge = badge(for: plan) {
                             badgeView(text: badge)
                         }
                     }
@@ -364,10 +365,7 @@ struct SubscriptionView: View {
                     spacing: 2
                 ) {
 
-                    Text(
-                        storeKit.product(for: plan)?.displayPrice
-                        ?? plan.fallbackPrice
-                    )
+                    Text(displayPrice(for: plan))
                     .font(Theme.Font.heading(20))
                     .fontWeight(.bold)
 
@@ -460,7 +458,23 @@ struct SubscriptionView: View {
     }
 
     private var availablePlans: [SubscriptionPlan] {
-        SubscriptionPlan.allCases
+        let configured = SubscriptionPlan.allCases.filter(storeKit.isPlanConfigured)
+        return configured.isEmpty ? SubscriptionPlan.allCases : configured
+    }
+
+    private func displayPrice(for plan: SubscriptionPlan) -> String {
+        if let product = storeKit.product(for: plan) {
+            return product.displayPrice
+        }
+        return storeKit.isConfigured ? "—" : plan.previewPrice
+    }
+
+    private func badge(for plan: SubscriptionPlan) -> String? {
+        guard storeKit.isPlanConfigured(plan) else { return plan.badge }
+        guard plan == .monthly else { return plan.badge }
+        return storeKit.product(for: plan)?.subscription?.introductoryOffer == nil
+            ? nil
+            : plan.badge
     }
 
     private func prepareStoreKit() async {

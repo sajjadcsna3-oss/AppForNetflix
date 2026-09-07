@@ -4,6 +4,7 @@ struct AuthView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var settings: SettingsStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     @State private var mode: Mode = .signIn
     @State private var name = ""
@@ -61,6 +62,24 @@ struct AuthView: View {
                     .foregroundStyle(Theme.textSecondary)
                     .frame(width: 320, alignment: .trailing)
                     .disabled(auth.isProcessing)
+                }
+
+                if mode == .signUp {
+                    VStack(spacing: 5) {
+                        Text(L10n.string(
+                            "Your name and email are sent to Firebase Authentication to create and manage your account.",
+                            languageCode: settings.languageCode
+                        ))
+                        .multilineTextAlignment(.center)
+
+                        HStack(spacing: 12) {
+                            legalLink("Privacy Policy", url: AppConfiguration.privacyPolicyURL)
+                            legalLink("Terms of Service", url: AppConfiguration.termsOfServiceURL)
+                        }
+                    }
+                    .font(Theme.Font.caption(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 320)
                 }
 
                 if let error = auth.lastErrorMessage {
@@ -182,6 +201,14 @@ struct AuthView: View {
         .padding(.vertical, 11)
         .background(Color.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func legalLink(_ title: String, url: URL?) -> some View {
+        Button(L10n.string(title, languageCode: settings.languageCode)) {
+            if let url { openURL(url) }
+        }
+        .buttonStyle(.link)
+        .disabled(url == nil)
     }
 
     private func submit() async {
