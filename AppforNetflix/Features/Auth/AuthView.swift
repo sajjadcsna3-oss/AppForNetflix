@@ -188,8 +188,11 @@ struct AuthView: View {
         let succeeded: Bool
         switch mode {
         case .signIn:
-            await auth.signIn(email: email, password: password, settings: settings)
-            succeeded = auth.isAuthenticated && auth.lastErrorMessage == nil
+            succeeded = await auth.signIn(
+                email: email,
+                password: password,
+                settings: settings
+            )
         case .signUp:
             succeeded = await auth.signUp(
                 name: name,

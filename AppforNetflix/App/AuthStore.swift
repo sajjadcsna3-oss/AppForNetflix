@@ -57,7 +57,7 @@ final class AuthStore: ObservableObject {
                 .createUser(withEmail: cleanEmail, password: password)
                 .user
         } catch let error as NSError {
-            print("🔥 Firebase SignUp Error [Code \(error.code)]: \(error.localizedDescription)")
+            Self.logFirebaseError(error, operation: "Sign Up")
             lastErrorMessage = Self.firebaseErrorMessage(error)
             return false
         }
@@ -78,7 +78,7 @@ final class AuthStore: ObservableObject {
             // The authenticated account is valid even if this optional profile
             // field could not be synchronized. Keep the supplied name locally
             // and allow a later profile edit to retry the remote update.
-            print("🔥 Firebase Profile Sync Error [Code \(error.code)]: \(error.localizedDescription)")
+            Self.logFirebaseError(error, operation: "Profile Sync")
         }
 
         return true
@@ -86,16 +86,17 @@ final class AuthStore: ObservableObject {
 
     // MARK: - Sign In
 
-    func signIn(email: String, password: String, settings: SettingsStore) async {
+    @discardableResult
+    func signIn(email: String, password: String, settings: SettingsStore) async -> Bool {
         let cleanEmail = AuthValidator.cleanEmail(email)
 
         guard AuthValidator.isValidEmail(cleanEmail) else {
             lastErrorMessage = L10n.string("Please enter a valid email address.")
-            return
+            return false
         }
         guard !password.isEmpty else {
             lastErrorMessage = L10n.string("Please enter your password.")
-            return
+            return false
         }
 
         isProcessing = true
@@ -111,10 +112,13 @@ final class AuthStore: ObservableObject {
                 ?? cleanEmail.components(separatedBy: "@").first
                 ?? "User"
             isAuthenticated = true
+            lastErrorMessage = nil
+            return true
 
         } catch let error as NSError {
-            print("🔥 Firebase SignIn Error [Code \(error.code)]: \(error.localizedDescription)")
+            Self.logFirebaseError(error, operation: "Sign In")
             lastErrorMessage = Self.firebaseErrorMessage(error)
+            return false
         }
     }
 
@@ -137,6 +141,7 @@ final class AuthStore: ObservableObject {
             try await Auth.auth().sendPasswordReset(withEmail: cleanEmail)
             lastNoticeMessage = L10n.string("Password reset email sent.")
         } catch let error as NSError {
+            Self.logFirebaseError(error, operation: "Password Reset")
             lastErrorMessage = Self.firebaseErrorMessage(error)
         }
     }
@@ -184,6 +189,7 @@ final class AuthStore: ObservableObject {
             }
             return true
         } catch let error as NSError {
+            Self.logFirebaseError(error, operation: "Profile Update")
             lastErrorMessage = Self.firebaseErrorMessage(error)
             return false
         }
@@ -196,7 +202,8 @@ final class AuthStore: ObservableObject {
             try Auth.auth().signOut()
             isAuthenticated = false
             lastErrorMessage = nil
-        } catch {
+        } catch let error as NSError {
+            Self.logFirebaseError(error, operation: "Sign Out")
             lastErrorMessage = L10n.string("Failed to sign out.")
         }
     }
@@ -217,6 +224,7 @@ final class AuthStore: ObservableObject {
             settings.clearAccountData()
             return true
         } catch let error as NSError {
+            Self.logFirebaseError(error, operation: "Delete Account")
             if let code = AuthErrorCode(rawValue: error.code), code == .requiresRecentLogin {
                 lastErrorMessage = L10n.string("For your security, please sign out and sign in again before deleting your account.")
             } else {
@@ -244,7 +252,7 @@ final class AuthStore: ObservableObject {
 
     private static func firebaseErrorMessage(_ error: NSError) -> String {
         guard let code = AuthErrorCode(rawValue: error.code) else {
-            return L10n.string("Something went wrong. Please try again.")
+            return userFacingDescription(for: error)
         }
         switch code {
         case .emailAlreadyInUse:
@@ -261,10 +269,29 @@ final class AuthStore: ObservableObject {
             return L10n.string("Network error. Check your internet connection.")
         case .tooManyRequests:
             return L10n.string("Too many failed attempts. Please try again later.")
-        case .internalError:
+        case .operationNotAllowed, .internalError:
             return L10n.string("Server error. Make sure Email/Password Auth is enabled in your Firebase Console.")
+        case .userDisabled:
+            return userFacingDescription(for: error)
+        case .requiresRecentLogin:
+            return userFacingDescription(for: error)
         default:
-            return L10n.string("Something went wrong. Please try again.")
+            return userFacingDescription(for: error)
         }
+    }
+
+    private static func userFacingDescription(for error: NSError) -> String {
+        let description = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return description.isEmpty
+            ? L10n.string("Something went wrong. Please try again.")
+            : description
+    }
+
+    private static func logFirebaseError(_ error: NSError, operation: String) {
+        print(
+            "🔥 Firebase \(operation) Error "
+            + "[Domain: \(error.domain), Code: \(error.code)]: "
+            + error.localizedDescription
+        )
     }
 }
