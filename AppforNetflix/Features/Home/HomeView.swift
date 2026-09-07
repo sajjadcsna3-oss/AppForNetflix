@@ -292,7 +292,7 @@ struct HomeView: View {
         if movies.isEmpty {
             EmptyStateView(
                 icon: "tv",
-                title: L10n.string("Nothing here ", languageCode: settings.languageCode),
+                title: L10n.string("Nothing here yet", languageCode: settings.languageCode),
                 message: String(
                     localized: "Titles will show up here once there's something to watch."
                 )
