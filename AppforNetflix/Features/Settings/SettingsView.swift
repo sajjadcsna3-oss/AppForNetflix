@@ -79,13 +79,12 @@ struct SettingsView: View {
                         title: "Region",
                         subtitle: L10n.string("Content availability region", languageCode: settings.languageCode)
                     ) {
-                        premiumIndicator
                         SettingsDropdown(
                             items: Country.all.map(\.name),
                             label: { name in
                                 "\(Country.find(name).flag) \(L10n.string(name, languageCode: settings.languageCode))"
                             },
-                            selection: premiumBinding($settings.region)
+                            selection: $settings.region
                         )
                     }
                 }

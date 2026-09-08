@@ -91,7 +91,7 @@ final class HomeViewModel: ObservableObject {
         guard !connectedPlatformIDs.isEmpty else {
             return try await service.trending(region: region, page: 1)
         }
-        return try await service.discover(
+        let filtered = try await service.discover(
             providerIDs: connectedPlatformIDs.compactMap { appID in
                 Platform.all.first(where: { $0.id == appID })?.tmdbProviderID
             }.sorted(),
@@ -99,6 +99,8 @@ final class HomeViewModel: ObservableObject {
             intent: .popular,
             page: 1
         )
+        if !filtered.movies.isEmpty { return filtered }
+        return try await service.trending(region: region, page: 1)
     }
     
     // NEW
@@ -106,7 +108,7 @@ final class HomeViewModel: ObservableObject {
         guard !connectedPlatformIDs.isEmpty else {
             return try await service.nowPlaying(region: region, page: 1)
         }
-        return try await service.discover(
+        let filtered = try await service.discover(
             providerIDs: connectedPlatformIDs.compactMap { appID in
                 Platform.all.first(where: { $0.id == appID })?.tmdbProviderID
             }.sorted(),
@@ -114,6 +116,11 @@ final class HomeViewModel: ObservableObject {
             intent: .nowPlaying,
             page: 1
         )
+        if !filtered.movies.isEmpty { return filtered }
+
+        let regional = try await service.nowPlaying(region: region, page: 1)
+        if !regional.movies.isEmpty || region == "US" { return regional }
+        return try await service.nowPlaying(region: "US", page: 1)
     }
     
     private func fetchAllPages(context: HomeLoadContext) async throws -> [Movie] {
@@ -166,7 +173,7 @@ final class HomeViewModel: ObservableObject {
         let needsDiscover = context.genre != nil || !providerIDs.isEmpty || minRating != nil || year != nil
         
         if needsDiscover {
-            return try await service.discover(
+            let filtered = try await service.discover(
                 genreID: context.genre?.id,
                 providerIDs: providerIDs,
                 region: context.region,
@@ -175,12 +182,47 @@ final class HomeViewModel: ObservableObject {
                 year: year,
                 page: page
             )
+            if !filtered.movies.isEmpty { return filtered }
+
+            // Preserve explicit genre/rating/year filters, but drop provider
+            // availability when that country has no matching catalog data.
+            if !providerIDs.isEmpty {
+                let regional = try await service.discover(
+                    genreID: context.genre?.id,
+                    region: context.region,
+                    intent: intent,
+                    minRating: minRating,
+                    year: year,
+                    page: page
+                )
+                if !regional.movies.isEmpty { return regional }
+            }
+
+            if context.region != "US" {
+                return try await service.discover(
+                    genreID: context.genre?.id,
+                    region: "US",
+                    intent: intent,
+                    minRating: minRating,
+                    year: year,
+                    page: page
+                )
+            }
+            return filtered
         }
-        
+
+        let regional: TMDBService.Page
         switch intent {
-        case .topRated: return try await service.topRated(region: context.region, page: page)
-        case .upcoming: return try await service.upcoming(region: context.region, page: page)
-        case .nowPlaying, .popular: return try await service.nowPlaying(region: context.region, page: page)
+        case .topRated: regional = try await service.topRated(region: context.region, page: page)
+        case .upcoming: regional = try await service.upcoming(region: context.region, page: page)
+        case .nowPlaying, .popular: regional = try await service.nowPlaying(region: context.region, page: page)
+        }
+        if !regional.movies.isEmpty || context.region == "US" { return regional }
+
+        switch intent {
+        case .topRated: return try await service.topRated(region: "US", page: page)
+        case .upcoming: return try await service.upcoming(region: "US", page: page)
+        case .nowPlaying, .popular: return try await service.nowPlaying(region: "US", page: page)
         }
     }
     

@@ -14,15 +14,18 @@ struct HeroPlatformBadge: View {
                 }
             }
             .frame(width: 18, height: 18)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
 
             Text(platform.name)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1)
 
             if !platform.availabilityLabel.isEmpty {
                 Text(platform.availabilityLabel)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
             }
         }
         .padding(.horizontal, 10)
@@ -33,5 +36,6 @@ struct HeroPlatformBadge: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
+        .fixedSize(horizontal: true, vertical: false)
     }
 }

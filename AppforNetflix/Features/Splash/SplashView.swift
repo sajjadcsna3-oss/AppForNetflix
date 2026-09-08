@@ -16,7 +16,7 @@ struct SplashView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 120, height: 120)
-                    .shadow(color: Color(hex: "E50914").opacity(0.4), radius: 30, y: 10)
+                    
                     .scaleEffect(isAnimating ? 1 : 0.85)
                     .opacity(isAnimating ? 1 : 0)
                 VStack(spacing: 8) {

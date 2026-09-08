@@ -20,6 +20,7 @@ struct HeroBanner: View {
                                    startPoint: .top, endPoint: .bottom)
                 }
             }
+            .frame(maxWidth: .infinity)
             .frame(height: 460)
             .clipped()
 
@@ -29,13 +30,14 @@ struct HeroBanner: View {
             )
 
             if !movie.platforms.isEmpty {
-                HStack(spacing: 12) {
-                    ForEach(movie.platforms) { platform in
-                        HeroPlatformBadge(platform: platform)
+                HStack(spacing: 8) {
+                    ForEach(movie.platforms.prefix(4)) { platform in
+                        compactProviderBadge(platform)
                     }
                 }
-                .padding(.trailing, 40)
-                .padding(.bottom, 64)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.trailing, 28)
+                .padding(.bottom, 72)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
 
@@ -63,8 +65,8 @@ struct HeroBanner: View {
                 Text(movie.overview)
                     .font(Theme.Font.body())
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(3)
-                    .frame(maxWidth: 560, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 620, alignment: .leading)
 
                 HStack(spacing: 12) {
                     Button(action: onWatch) {
@@ -108,7 +110,37 @@ struct HeroBanner: View {
                 }
             }
             .padding(28)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(height: 460)
+    }
+
+    private func compactProviderBadge(_ platform: WatchProvider) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(providerColor(for: platform))
+                .frame(width: 5, height: 5)
+
+            Text(platform.name)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.82))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+        .background(Color.black.opacity(0.62))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func providerColor(for platform: WatchProvider) -> Color {
+        let name = platform.name.lowercased()
+        if name.contains("netflix") { return Theme.accent }
+        if name.contains("prime") || name.contains("amazon") { return Color(hex: "00A8E1") }
+        return .white.opacity(0.65)
     }
 }

@@ -207,12 +207,14 @@ struct MovieDetailView: View {
                             )
                             .padding(.horizontal, 40)
                         } else {
-                            HStack(spacing: 12) {
-                                ForEach(platforms) { platform in
-                                    HeroPlatformBadge(platform: platform)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 10) {
+                                    ForEach(platforms) { platform in
+                                        HeroPlatformBadge(platform: platform)
+                                    }
                                 }
+                                .padding(.horizontal, 40)
                             }
-                            .padding(.horizontal, 40)
                         }
                     }
 

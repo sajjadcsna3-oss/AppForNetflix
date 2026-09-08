@@ -195,26 +195,14 @@ struct TopBar: View {
         FilterDropdown(
             label: L10n.string(settings.region, languageCode: settings.languageCode),
             buttonIcon: AnyView(
-                HStack(spacing: 4) {
-                    Text(Country.find(settings.region).flag)
-                    if !isPremiumUser {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 9, weight: .bold))
-                    }
-                }
+                Text(Country.find(settings.region).flag)
             ),
             panelWidth: 194.85,
             panelHeight: 185.2,
             panelAlignment: .topTrailing,
             isOpen: Binding(
                 get: { openDropdown == .country },
-                set: { wantsToOpen in
-                    if wantsToOpen && !isPremiumUser {
-                        router.showSubscription()
-                    } else {
-                        openDropdown = wantsToOpen ? .country : nil
-                    }
-                }
+                set: { openDropdown = $0 ? .country : nil }
             )
         ) { dismiss in
 
