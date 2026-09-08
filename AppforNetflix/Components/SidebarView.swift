@@ -45,7 +45,7 @@ struct SidebarView: View {
         let isLocked = storeKit.isConfigured && !settings.isPremium && isPremiumSection
         return Button {
             if isLocked {
-                router.showSubscription()
+                router.showSubscription(then: .section(section))
             } else {
                 router.select(section)
             }

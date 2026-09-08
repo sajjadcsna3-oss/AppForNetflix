@@ -78,10 +78,10 @@ final class HomeViewModel: ObservableObject {
         var heroMovie = trendingResult.movies.first ?? .placeholder
         
         if heroMovie.id != Movie.placeholder.id {
-            heroMovie.platforms = await WatchmodeService.shared.platforms(
-                forTMDBId: heroMovie.id,
-                regionCode: region
-            )
+            heroMovie.platforms = (try? await service.watchProviders(
+                id: heroMovie.id,
+                region: region
+            ).providers) ?? []
         }
         featured = heroMovie
     }

@@ -3,7 +3,6 @@ import Foundation
 enum AppConfiguration {
     private enum Key {
         static let tmdbAPIKey = "TMDBAPIKey"
-        static let watchmodeAPIKey = "WatchmodeAPIKey"
     }
 
     static func string(for key: String) -> String {
@@ -21,7 +20,6 @@ enum AppConfiguration {
     static var privacyPolicyURL: URL? { publicHTTPSURL(for: "PrivacyPolicyURL") }
     static var termsOfServiceURL: URL? { publicHTTPSURL(for: "TermsOfServiceURL") }
     static var tmdbAPIKey: String { string(for: Key.tmdbAPIKey) }
-    static var watchmodeAPIKey: String { string(for: Key.watchmodeAPIKey) }
 
     private static func publicHTTPSURL(for key: String) -> URL? {
         guard let url = URL(string: string(for: key)),

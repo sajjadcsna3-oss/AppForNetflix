@@ -1,6 +1,5 @@
 // Safe defaults. Local.xcconfig is intentionally ignored by Git.
 TMDB_API_KEY =
-WATCHMODE_API_KEY =
 PRIVACY_POLICY_URL =
 TERMS_OF_SERVICE_URL =
 STOREKIT_WEEKLY_PRODUCT_ID =

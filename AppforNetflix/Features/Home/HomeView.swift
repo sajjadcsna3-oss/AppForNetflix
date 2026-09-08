@@ -71,7 +71,7 @@ struct HomeView: View {
                 recentViewModel: recentViewModel
             )
         }
-        .sheet(isPresented: $router.isShowingSubscription) {
+        .sheet(isPresented: $router.isShowingSubscription, onDismiss: continuePendingPremiumDestination) {
             SubscriptionView()
         }
         .onChange(of: router.selectedSection) {
@@ -216,7 +216,7 @@ struct HomeView: View {
                         onWatch: { router.showDetails(for: featured) },
                         onToggleWatchlist: {
                             if storeKit.isConfigured && !settings.isPremium {
-                                router.showSubscription()
+                                router.showSubscription(then: .addToWatchlist(featured))
                             } else {
                                 watchlistViewModel.toggle(featured)
                             }
@@ -262,6 +262,20 @@ struct HomeView: View {
                 )
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
+            }
+        }
+    }
+
+    private func continuePendingPremiumDestination() {
+        guard let destination = router.takePendingPremiumDestination(),
+              storeKit.hasPremiumEntitlement else { return }
+
+        switch destination {
+        case .section(let section):
+            router.select(section)
+        case .addToWatchlist(let movie):
+            if !watchlistViewModel.isSaved(movie) {
+                watchlistViewModel.toggle(movie)
             }
         }
     }

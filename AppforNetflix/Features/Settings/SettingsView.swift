@@ -16,6 +16,24 @@ struct SettingsView: View {
 
     private let languages = AppLanguage.supportedCodes
 
+    private let videoQualities = [
+        "Auto (4K)",
+        "4K",
+        "1080p",
+        "720p",
+        "480p",
+        "Data Saver"
+    ]
+
+    private let subtitleOptions = [
+        "Off",
+        "English",
+        "Arabic",
+        "Urdu",
+        "French",
+        "Spanish"
+    ]
+
     var body: some View {
         ScrollView {
             VStack(
@@ -71,6 +89,45 @@ struct SettingsView: View {
                     }
                 }
 
+                section("PLAYBACK") {
+                    settingsRow(
+                        title: "Video Quality",
+                        subtitle: L10n.string("Preferred quality for playback handled by this app", languageCode: settings.languageCode)
+                    ) {
+                        SettingsDropdown(
+                            items: videoQualities,
+                            label: {
+                                L10n.string($0, languageCode: settings.languageCode)
+                            },
+                            selection: $settings.videoQuality
+                        )
+                    }
+
+                    rowDivider
+
+                    settingsRow(
+                        title: "Autoplay",
+                        subtitle: L10n.string("Play the next item automatically when supported in this app", languageCode: settings.languageCode)
+                    ) {
+                        CustomRedSwitch(isOn: $settings.autoplayNext)
+                    }
+
+                    rowDivider
+
+                    settingsRow(
+                        title: "Subtitles",
+                        subtitle: L10n.string("Preferred subtitles for playback handled by this app", languageCode: settings.languageCode)
+                    ) {
+                        SettingsDropdown(
+                            items: subtitleOptions,
+                            label: {
+                                L10n.string($0, languageCode: settings.languageCode)
+                            },
+                            selection: $settings.subtitles
+                        )
+                    }
+                }
+
                 section("STREAMING PLATFORMS") {
                     ForEach(
                         Array(
@@ -89,19 +146,17 @@ struct SettingsView: View {
                 section("ABOUT & CREDITS") {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top, spacing: 10) {
-                            // Replace the fallback with TMDB's approved, unmodified
-                            // `TMDBLogo` asset before distribution.
-                            AppIconView(assetName: "TMDBLogo", fallbackSymbol: "film")
-                                .frame(width: 48, height: 20)
+                            AppIconView(
+                                assetName: "TMDB Logo",
+                                fallbackSymbol: "film",
+                                renderingMode: .original
+                            )
+                            .frame(width: 56, height: 40)
 
                             Text(L10n.string("This product uses the TMDB API but is not endorsed or certified by TMDB.", languageCode: settings.languageCode))
                                 .font(Theme.Font.caption(12))
                                 .foregroundStyle(Theme.textSecondary)
                         }
-
-                        Text(L10n.string("Streaming availability data is provided by Watchmode.", languageCode: settings.languageCode))
-                            .font(Theme.Font.caption(12))
-                            .foregroundStyle(Theme.textSecondary)
 
                         Text(L10n.string("Streaming-provider availability data is provided by JustWatch.", languageCode: settings.languageCode))
                             .font(Theme.Font.caption(12))

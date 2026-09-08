@@ -74,7 +74,5 @@
 	<array>
 		<string>PollerOne-Regular.ttf</string>
 	</array>
-	<key>WatchmodeAPIKey</key>
-	<string>$(WATCHMODE_API_KEY)</string>
 </dict>
 </plist>

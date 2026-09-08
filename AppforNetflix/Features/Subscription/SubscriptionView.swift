@@ -516,10 +516,7 @@ struct SubscriptionView: View {
             switch result {
 
             case .purchased:
-
-                showAlert(
-                    "Your purchase was successful."
-                )
+                dismiss()
 
             case .pending:
 
@@ -548,10 +545,7 @@ struct SubscriptionView: View {
             try await storeKit.restorePurchases()
 
             if storeKit.hasPremiumEntitlement {
-
-                showAlert(
-                    "Your purchases were restored."
-                )
+                dismiss()
 
             } else {
 

@@ -1,16 +1,29 @@
 import SwiftUI
 
 struct HeroPlatformBadge: View {
-    let platform: Platform
+    let platform: WatchProvider
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(platform.color)
-                .frame(width: 8, height: 8)
+            AsyncImage(url: platform.logoURL) { phase in
+                if case .success(let image) = phase {
+                    image.resizable().scaledToFit()
+                } else {
+                    Image(systemName: "play.tv.fill")
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .frame(width: 18, height: 18)
+
             Text(platform.name)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))
+
+            if !platform.availabilityLabel.isEmpty {
+                Text(platform.availabilityLabel)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

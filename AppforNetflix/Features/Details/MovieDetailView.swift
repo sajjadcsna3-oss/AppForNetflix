@@ -12,11 +12,13 @@ struct MovieDetailView: View {
     @Environment(\.openURL) private var openURL
 
     @State private var isSaved = false
-    @State private var platforms: [Platform] = []
+    @State private var platforms: [WatchProvider] = []
+    @State private var watchProvidersLink: URL?
     @State private var cast: [CastMember] = []
     @State private var similar: [Movie] = []
     @State private var isLoadingExtras = true
     @State private var isShowingSubscription = false
+    @State private var shouldAddToWatchlistAfterPurchase = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -113,6 +115,7 @@ struct MovieDetailView: View {
 
                                 Button {
                                     if storeKit.isConfigured && !settings.isPremium {
+                                        shouldAddToWatchlistAfterPurchase = true
                                         isShowingSubscription = true
                                     } else {
                                         watchlistViewModel.toggle(movie)
@@ -287,27 +290,44 @@ struct MovieDetailView: View {
         .task(id: settings.languageCode) {
             await loadExtras()
         }
-        .sheet(isPresented: $isShowingSubscription) {
+        .sheet(isPresented: $isShowingSubscription, onDismiss: continueWatchlistAddition) {
             SubscriptionView()
         }
+    }
+
+    private func continueWatchlistAddition() {
+        guard shouldAddToWatchlistAfterPurchase else { return }
+        shouldAddToWatchlistAfterPurchase = false
+        guard storeKit.hasPremiumEntitlement else { return }
+
+        if !watchlistViewModel.isSaved(movie) {
+            watchlistViewModel.toggle(movie)
+        }
+        isSaved = watchlistViewModel.isSaved(movie)
     }
 
     private func loadExtras() async {
         isLoadingExtras = true
         let region = Country.find(settings.region).code
 
-        async let watchmodePlatforms = WatchmodeService.shared.platforms(
-            forTMDBId: movie.id,
-            regionCode: region
-        )
+        async let providerAvailability = loadWatchProviders(region: region)
         async let credits = loadCast()
         async let similarMovies = loadSimilar()
 
-        let (p, c, s) = await (watchmodePlatforms, credits, similarMovies)
-        platforms = p
+        let (availability, c, s) = await (providerAvailability, credits, similarMovies)
+        platforms = availability.providers
+        watchProvidersLink = availability.link
         cast = c
         similar = s
         isLoadingExtras = false
+    }
+
+    private func loadWatchProviders(region: String) async -> WatchProviderAvailability {
+        (try? await TMDBService.shared.watchProviders(
+            id: movie.id,
+            mediaType: .movie,
+            region: region
+        )) ?? .empty
     }
 
     private func loadCast() async -> [CastMember] {
@@ -328,35 +348,13 @@ struct MovieDetailView: View {
     }
 
     private func watchNowURL() -> URL {
+        if let watchProvidersLink {
+            return watchProvidersLink
+        }
+
         let query = movie.title.addingPercentEncoding(
             withAllowedCharacters: .urlQueryAllowed
         ) ?? movie.title
-
-        if let platform = platforms.first {
-            let base: String
-
-            switch platform.id {
-            case Platform.netflix.id:
-                base = "https://www.netflix.com/search?q="
-            case Platform.primeVideo.id:
-                base = "https://www.amazon.com/s?k="
-            case Platform.disneyPlus.id:
-                base = "https://www.disneyplus.com/search?q="
-            case Platform.appleTVPlus.id:
-                base = "https://tv.apple.com/search?term="
-            case Platform.hulu.id:
-                base = "https://www.hulu.com/search?q="
-            case Platform.max.id:
-                base = "https://www.max.com/search?q="
-            case Platform.peacock.id:
-                base = "https://www.peacocktv.com/search?q="
-            default:
-                base = "https://www.google.com/search?q=watch+"
-            }
-
-            return URL(string: base + query) ?? fallbackSearchURL(query: query)
-        }
-
         return fallbackSearchURL(query: query)
     }
 

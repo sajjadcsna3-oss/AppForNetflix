@@ -13,11 +13,9 @@ struct Movie: Identifiable, Codable, Hashable {
     let genreIDs: [Int]
     let runtimeMinutes: Int?
 
-    /// Platforms this title is available on. TMDB doesn't provide this for
-    /// free, so it's populated from `WatchProvidersService` when available
-    /// and defaults to an empty list otherwise — the UI treats that as
-    /// "availability unknown" rather than showing a wrong platform.
-    var platforms: [Platform] = []
+    /// Country-specific streaming, rental, and purchase options returned by
+    /// TMDB's JustWatch-powered watch-provider endpoint.
+    var platforms: [WatchProvider] = []
 
     var year: String {
         guard let releaseDate, let year = releaseDate.split(separator: "-").first else { return "—" }

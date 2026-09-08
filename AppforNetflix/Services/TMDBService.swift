@@ -47,6 +47,36 @@ actor TMDBService {
         }
     }
 
+    enum MediaType: String {
+        case movie
+        case tv
+    }
+
+    private struct WatchProviderResponse: Decodable {
+        let results: [String: CountryWatchProviders]
+    }
+
+    private struct CountryWatchProviders: Decodable {
+        let link: URL?
+        let flatrate: [ProviderItem]?
+        let rent: [ProviderItem]?
+        let buy: [ProviderItem]?
+    }
+
+    private struct ProviderItem: Decodable {
+        let providerID: Int
+        let providerName: String
+        let logoPath: String?
+        let displayPriority: Int
+
+        enum CodingKeys: String, CodingKey {
+            case providerID = "provider_id"
+            case providerName = "provider_name"
+            case logoPath = "logo_path"
+            case displayPriority = "display_priority"
+        }
+    }
+
     // MARK: - Simple Lists
 
     func trending(region: String = "US", page: Int = 1) async throws -> Page {
@@ -235,6 +265,46 @@ actor TMDBService {
         }
     }
 
+    func watchProviders(
+        id: Int,
+        mediaType: MediaType = .movie,
+        region: String
+    ) async throws -> WatchProviderAvailability {
+        let url = makeURL(
+            path: "\(mediaType.rawValue)/\(id)/watch/providers",
+            query: [:]
+        )
+
+        let (data, response) = try await session.data(from: url)
+        try Self.validate(response)
+
+        let decoded: WatchProviderResponse
+        do {
+            decoded = try JSONDecoder().decode(WatchProviderResponse.self, from: data)
+        } catch {
+            throw NetworkError.decoding
+        }
+
+        guard let country = decoded.results[region.uppercased()] else {
+            return .empty
+        }
+
+        var providersByID: [Int: WatchProvider] = [:]
+        merge(country.flatrate, type: .flatrate, into: &providersByID)
+        merge(country.rent, type: .rent, into: &providersByID)
+        merge(country.buy, type: .buy, into: &providersByID)
+
+        return WatchProviderAvailability(
+            link: country.link,
+            providers: providersByID.values.sorted {
+                if $0.displayPriority == $1.displayPriority {
+                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+                return $0.displayPriority < $1.displayPriority
+            }
+        )
+    }
+
     // MARK: - Credits
 
     private struct CreditsResponse: Codable {
@@ -280,6 +350,24 @@ actor TMDBService {
             case results
             case page
             case totalPages = "total_pages"
+        }
+    }
+
+    private func merge(
+        _ items: [ProviderItem]?,
+        type: WatchMonetizationType,
+        into providersByID: inout [Int: WatchProvider]
+    ) {
+        for item in items ?? [] {
+            var types = providersByID[item.providerID]?.monetizationTypes ?? []
+            types.insert(type)
+            providersByID[item.providerID] = WatchProvider(
+                id: item.providerID,
+                name: item.providerName,
+                logoPath: item.logoPath,
+                displayPriority: item.displayPriority,
+                monetizationTypes: types
+            )
         }
     }
 

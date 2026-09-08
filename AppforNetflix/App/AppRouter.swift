@@ -38,6 +38,11 @@ enum SidebarSection: String, CaseIterable, Identifiable {
     }
 }
 
+enum PremiumDestination: Equatable {
+    case section(SidebarSection)
+    case addToWatchlist(Movie)
+}
+
 @MainActor
 final class AppRouter: ObservableObject {
 
@@ -46,6 +51,7 @@ final class AppRouter: ObservableObject {
 
     @Published var presentedMovie: Movie?
     @Published var isShowingSubscription = false
+    private(set) var pendingPremiumDestination: PremiumDestination?
 
     func select(_ section: SidebarSection) {
         selectedSection = section
@@ -61,7 +67,13 @@ final class AppRouter: ObservableObject {
         presentedMovie = movie
     }
 
-    func showSubscription() {
+    func showSubscription(then destination: PremiumDestination? = nil) {
+        pendingPremiumDestination = destination
         isShowingSubscription = true
+    }
+
+    func takePendingPremiumDestination() -> PremiumDestination? {
+        defer { pendingPremiumDestination = nil }
+        return pendingPremiumDestination
     }
 }
