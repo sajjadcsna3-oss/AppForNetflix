@@ -3,13 +3,14 @@ import Combine
 
 @MainActor
 final class SettingsStore: ObservableObject {
+    static let freePlatformConnectionLimit = 1
     @Published var region: String { didSet { defaults.set(region, forKey: Keys.region) } }
     @Published var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
     @Published var videoQuality: String { didSet { defaults.set(videoQuality, forKey: Keys.videoQuality) } }
     @Published var subtitles: String { didSet { defaults.set(subtitles, forKey: Keys.subtitles) } }
     @Published var autoplayNext: Bool { didSet { defaults.set(autoplayNext, forKey: Keys.autoplayNext) } }
     /// A display cache updated only from verified StoreKit entitlements.
-    @Published private(set) var isPremium: Bool = false
+    @Published private(set) var isPremium: Bool
     @Published var userName: String { didSet { defaults.set(userName, forKey: Keys.userName) } }
     @Published var userEmail: String { didSet { defaults.set(userEmail, forKey: Keys.userEmail) } }
     @Published var connectedPlatformIDs: Set<Int> { didSet { defaults.set(Array(connectedPlatformIDs), forKey: Keys.connectedPlatforms) } }
@@ -34,6 +35,7 @@ final class SettingsStore: ObservableObject {
         static let connectedPlatforms = "settings.connectedPlatforms"
         static let appearance = "settings.appearance"
         static let selectedPlatform = "settings.selectedPlatformID"
+        static let isPremiumUser = "isPremiumUser"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -47,6 +49,7 @@ final class SettingsStore: ObservableObject {
         self.autoplayNext = defaults.object(forKey: Keys.autoplayNext) as? Bool
             ?? defaults.object(forKey: Keys.legacyAutoplay) as? Bool
             ?? true
+        self.isPremium = defaults.bool(forKey: Keys.isPremiumUser)
         self.userName = defaults.string(forKey: Keys.userName) ?? ""
         self.userEmail = defaults.string(forKey: Keys.userEmail) ?? ""
 
@@ -83,8 +86,28 @@ final class SettingsStore: ObservableObject {
         connectedPlatformIDs.contains(platform.id)
     }
 
+    func effectiveConnectedPlatformIDs(isPremium: Bool) -> Set<Int> {
+        guard !isPremium else { return connectedPlatformIDs }
+        let allowedIDs = Platform.all
+            .map(\.id)
+            .filter(connectedPlatformIDs.contains)
+            .prefix(Self.freePlatformConnectionLimit)
+        return Set(allowedIDs)
+    }
+
+    func canConnect(_ platform: Platform, isPremium: Bool) -> Bool {
+        if isPremium { return true }
+        let effectiveIDs = effectiveConnectedPlatformIDs(isPremium: false)
+        if isConnected(platform) { return effectiveIDs.contains(platform.id) }
+        return effectiveIDs.count < Self.freePlatformConnectionLimit
+    }
+
     func updatePremiumEntitlement(_ isPremium: Bool) {
         self.isPremium = isPremium
+        defaults.set(isPremium, forKey: Keys.isPremiumUser)
+        if !isPremium && (videoQuality == "Auto (4K)" || videoQuality == "4K") {
+            videoQuality = "1080p"
+        }
     }
 
     func clearAccountData() {

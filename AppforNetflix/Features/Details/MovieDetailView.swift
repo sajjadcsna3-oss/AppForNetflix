@@ -19,6 +19,7 @@ struct MovieDetailView: View {
     @State private var isLoadingExtras = true
     @State private var isShowingSubscription = false
     @State private var shouldAddToWatchlistAfterPurchase = false
+    @State private var isShowingPurchaseSuccess = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -114,7 +115,7 @@ struct MovieDetailView: View {
                                 .buttonStyle(.plain)
 
                                 Button {
-                                    if storeKit.isConfigured && !settings.isPremium {
+                                    if !isPremiumUser {
                                         shouldAddToWatchlistAfterPurchase = true
                                         isShowingSubscription = true
                                     } else {
@@ -122,12 +123,20 @@ struct MovieDetailView: View {
                                         isSaved = watchlistViewModel.isSaved(movie)
                                     }
                                 } label: {
-                                    Label(
-                                        isSaved
-                                            ? L10n.string("In My List", languageCode: settings.languageCode)
-                                            : L10n.string("My List", languageCode: settings.languageCode),
-                                        systemImage: isSaved ? "checkmark" : "plus"
-                                    )
+                                    HStack(spacing: 6) {
+                                        Label(
+                                            isSaved
+                                                ? L10n.string("In My List", languageCode: settings.languageCode)
+                                                : L10n.string("My List", languageCode: settings.languageCode),
+                                            systemImage: isPremiumUser
+                                                ? (isSaved ? "checkmark" : "plus")
+                                                : "lock.fill"
+                                        )
+                                        if !isPremiumUser {
+                                            Text("PRO")
+                                                .font(.system(size: 9, weight: .bold))
+                                        }
+                                    }
                                     .font(.system(size: 14, weight: .bold))
                                     .padding(.horizontal, 24)
                                     .padding(.vertical, 12)
@@ -283,7 +292,7 @@ struct MovieDetailView: View {
         )
         .onAppear {
             isSaved = watchlistViewModel.isSaved(movie)
-            if !storeKit.isConfigured || settings.isPremium {
+            if isPremiumUser {
                 recentViewModel.record(movie)
             }
         }
@@ -291,7 +300,17 @@ struct MovieDetailView: View {
             await loadExtras()
         }
         .sheet(isPresented: $isShowingSubscription, onDismiss: continueWatchlistAddition) {
-            SubscriptionView()
+            SubscriptionView {
+                isShowingPurchaseSuccess = true
+            }
+        }
+        .alert(
+            L10n.string("Purchase Information", languageCode: settings.languageCode),
+            isPresented: $isShowingPurchaseSuccess
+        ) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(L10n.string("Your purchase was successful.", languageCode: settings.languageCode))
         }
     }
 
@@ -304,6 +323,12 @@ struct MovieDetailView: View {
             watchlistViewModel.toggle(movie)
         }
         isSaved = watchlistViewModel.isSaved(movie)
+    }
+
+    private var isPremiumUser: Bool {
+        storeKit.entitlementState == .loading
+            ? settings.isPremium
+            : storeKit.hasPremiumEntitlement
     }
 
     private func loadExtras() async {

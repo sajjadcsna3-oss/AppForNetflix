@@ -5,6 +5,8 @@ import AppKit
 
 struct TopBar: View {
     @EnvironmentObject private var settings: SettingsStore
+    @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var storeKit: StoreKitService
     @Binding var searchText: String
     @ObservedObject var viewModel: HomeViewModel
 
@@ -33,6 +35,21 @@ struct TopBar: View {
                 .textFieldStyle(.plain)
                 .foregroundStyle(Theme.textPrimary)
                 .focused($isSearchFocused)
+                .allowsHitTesting(isPremiumUser)
+
+                if !isPremiumUser {
+                    Button {
+                        router.showSubscription()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "lock.fill")
+                            Text("PRO")
+                        }
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Theme.textTertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 Text("⌘K")
                     .font(Theme.Font.caption(11))
@@ -56,7 +73,13 @@ struct TopBar: View {
             )
             .frame(maxWidth: 340)
             .background {
-                Button("") { isSearchFocused = true }
+                Button("") {
+                    if isPremiumUser {
+                        isSearchFocused = true
+                    } else {
+                        router.showSubscription()
+                    }
+                }
                     .keyboardShortcut("k", modifiers: .command)
                     .frame(width: 0, height: 0)
                     .opacity(0)
@@ -172,14 +195,26 @@ struct TopBar: View {
         FilterDropdown(
             label: L10n.string(settings.region, languageCode: settings.languageCode),
             buttonIcon: AnyView(
-                Text(Country.find(settings.region).flag)
+                HStack(spacing: 4) {
+                    Text(Country.find(settings.region).flag)
+                    if !isPremiumUser {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                }
             ),
             panelWidth: 194.85,
             panelHeight: 185.2,
             panelAlignment: .topTrailing,
             isOpen: Binding(
                 get: { openDropdown == .country },
-                set: { openDropdown = $0 ? .country : nil }
+                set: { wantsToOpen in
+                    if wantsToOpen && !isPremiumUser {
+                        router.showSubscription()
+                    } else {
+                        openDropdown = wantsToOpen ? .country : nil
+                    }
+                }
             )
         ) { dismiss in
 
@@ -200,12 +235,19 @@ struct TopBar: View {
             }
         }
     }
+
+    private var isPremiumUser: Bool {
+        storeKit.entitlementState == .loading
+            ? settings.isPremium
+            : storeKit.hasPremiumEntitlement
+    }
 }
 
 // MARK: - Platforms
 
 struct OverlappingPlatformsView: View {
     @EnvironmentObject private var settings: SettingsStore
+    @EnvironmentObject private var storeKit: StoreKitService
     let selectedPlatform: Platform?
     var platforms: [Platform] = Platform.filterBar
 
@@ -218,8 +260,15 @@ struct OverlappingPlatformsView: View {
             return [selectedPlatform]
         }
 
-        let connected = platforms.filter { settings.connectedPlatformIDs.contains($0.id) }
+        let effectiveIDs = settings.effectiveConnectedPlatformIDs(isPremium: isPremiumUser)
+        let connected = platforms.filter { effectiveIDs.contains($0.id) }
         return connected.isEmpty ? platforms : connected
+    }
+
+    private var isPremiumUser: Bool {
+        storeKit.entitlementState == .loading
+            ? settings.isPremium
+            : storeKit.hasPremiumEntitlement
     }
 
     var body: some View {

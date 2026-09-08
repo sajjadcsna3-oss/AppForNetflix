@@ -7,6 +7,7 @@ struct HeroBanner: View {
     var onToggleWatchlist: () -> Void
     var onInfo: () -> Void = {}
     var isSaved: Bool
+    var isWatchlistLocked: Bool = false
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -77,10 +78,16 @@ struct HeroBanner: View {
                     .buttonStyle(.plain)
 
                     Button(action: onToggleWatchlist) {
-                        Label(
-                            L10n.string(isSaved ? "In My List" : "My List", languageCode: settings.languageCode),
-                            systemImage: isSaved ? "checkmark" : "plus"
-                        )
+                        HStack(spacing: 6) {
+                            Label(
+                                L10n.string(isSaved ? "In My List" : "My List", languageCode: settings.languageCode),
+                                systemImage: isWatchlistLocked ? "lock.fill" : (isSaved ? "checkmark" : "plus")
+                            )
+                            if isWatchlistLocked {
+                                Text("PRO")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                        }
                             .font(Theme.Font.body(14)).fontWeight(.semibold)
                             .padding(.horizontal, 20).padding(.vertical, 11)
                             .background(Theme.surfaceElevated)

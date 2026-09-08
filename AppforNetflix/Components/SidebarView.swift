@@ -30,7 +30,7 @@ struct SidebarView: View {
                 }
             }
 
-            if !settings.isPremium {
+            if !isPremiumUser {
                 premiumCard
                     .padding(12)
             }
@@ -42,7 +42,7 @@ struct SidebarView: View {
     private func sidebarRow(_ section: SidebarSection) -> some View {
         let isSelected = router.selectedSection == section && router.selectedGenre == nil
         let isPremiumSection = section == .watchlist || section == .recent
-        let isLocked = storeKit.isConfigured && !settings.isPremium && isPremiumSection
+        let isLocked = !isPremiumUser && isPremiumSection
         return Button {
             if isLocked {
                 router.showSubscription(then: .section(section))
@@ -56,6 +56,11 @@ struct SidebarView: View {
                 Text(L10n.string(section.rawValue, languageCode: settings.languageCode))
                     .font(Theme.Font.body())
                 Spacer()
+                if isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
@@ -65,6 +70,12 @@ struct SidebarView: View {
             .padding(.horizontal, 10)
         }
         .buttonStyle(.plain)
+    }
+
+    private var isPremiumUser: Bool {
+        storeKit.entitlementState == .loading
+            ? settings.isPremium
+            : storeKit.hasPremiumEntitlement
     }
 
     private func genreRow(_ genre: Genre) -> some View {

@@ -13,6 +13,8 @@ struct HomeView: View {
     
     @State private var searchText = ""
     @State private var seeAllList: SeeAllList?
+    @State private var hasHandledInitialSubscriptionPresentation = false
+    @State private var isShowingPurchaseSuccess = false
 
     enum SeeAllList: Identifiable, Equatable {
         case continueWatching
@@ -53,6 +55,7 @@ struct HomeView: View {
         .task {
             watchlistViewModel.configure(context: modelContext)
             recentViewModel.configure(context: modelContext)
+            presentInitialSubscriptionIfNeeded()
         }
         .onAppear {
             auth.restoreSession(settings: settings)
@@ -62,7 +65,11 @@ struct HomeView: View {
         }
         .task(id: "\(searchText)|\(settings.languageCode)") {
             try? await Task.sleep(for: .milliseconds(300))
-            await viewModel.search(searchText, region: regionCode)
+            if isPremiumUser {
+                await viewModel.search(searchText, region: regionCode)
+            } else {
+                await viewModel.search("", region: regionCode)
+            }
         }
         .sheet(item: $router.presentedMovie) { movie in
             MovieDetailView(
@@ -72,7 +79,17 @@ struct HomeView: View {
             )
         }
         .sheet(isPresented: $router.isShowingSubscription, onDismiss: continuePendingPremiumDestination) {
-            SubscriptionView()
+            SubscriptionView {
+                isShowingPurchaseSuccess = true
+            }
+        }
+        .alert(
+            L10n.string("Purchase Information", languageCode: settings.languageCode),
+            isPresented: $isShowingPurchaseSuccess
+        ) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(L10n.string("Your purchase was successful.", languageCode: settings.languageCode))
         }
         .onChange(of: router.selectedSection) {
             seeAllList = nil
@@ -85,8 +102,11 @@ struct HomeView: View {
                 seeAllList = nil
             }
         }
-        .onChange(of: settings.isPremium) {
-            guard storeKit.isConfigured, !settings.isPremium else { return }
+        .onChange(of: storeKit.entitlementState) {
+            presentInitialSubscriptionIfNeeded()
+
+            guard storeKit.entitlementState == .notEntitled else { return }
+            searchText = ""
             if router.selectedSection == .watchlist || router.selectedSection == .recent {
                 router.select(.home)
             }
@@ -104,7 +124,7 @@ struct HomeView: View {
             section: router.selectedSection,
             genre: router.selectedGenre,
             platform: settings.selectedPlatform,
-            connectedPlatformIDs: settings.connectedPlatformIDs,
+            connectedPlatformIDs: settings.effectiveConnectedPlatformIDs(isPremium: isPremiumUser),
             region: regionCode,
             rating: viewModel.ratingFilter,
             year: viewModel.yearFilter,
@@ -215,7 +235,7 @@ struct HomeView: View {
                         movie: featured,
                         onWatch: { router.showDetails(for: featured) },
                         onToggleWatchlist: {
-                            if storeKit.isConfigured && !settings.isPremium {
+                            if !isPremiumUser {
                                 router.showSubscription(then: .addToWatchlist(featured))
                             } else {
                                 watchlistViewModel.toggle(featured)
@@ -224,8 +244,9 @@ struct HomeView: View {
                         onInfo: {
                             router.showDetails(for: featured)
                         },
-                        isSaved: (!storeKit.isConfigured || settings.isPremium)
-                            && watchlistViewModel.isSaved(featured)
+                        isSaved: isPremiumUser
+                            && watchlistViewModel.isSaved(featured),
+                        isWatchlistLocked: !isPremiumUser
                     )
                     .padding(.horizontal, 24)
                 }
@@ -277,6 +298,22 @@ struct HomeView: View {
             if !watchlistViewModel.isSaved(movie) {
                 watchlistViewModel.toggle(movie)
             }
+        }
+    }
+
+    private var isPremiumUser: Bool {
+        storeKit.entitlementState == .loading
+            ? settings.isPremium
+            : storeKit.hasPremiumEntitlement
+    }
+
+    private func presentInitialSubscriptionIfNeeded() {
+        guard !hasHandledInitialSubscriptionPresentation,
+              storeKit.entitlementState != .loading else { return }
+
+        hasHandledInitialSubscriptionPresentation = true
+        if storeKit.entitlementState == .notEntitled {
+            router.showSubscription()
         }
     }
 

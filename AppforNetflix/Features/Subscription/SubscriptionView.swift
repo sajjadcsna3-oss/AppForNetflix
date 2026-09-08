@@ -3,6 +3,8 @@ import StoreKit
 
 struct SubscriptionView: View {
 
+    var onPurchaseSuccess: () -> Void = { }
+
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var storeKit: StoreKitService
 
@@ -516,6 +518,8 @@ struct SubscriptionView: View {
             switch result {
 
             case .purchased:
+                settings.updatePremiumEntitlement(storeKit.hasPremiumEntitlement)
+                onPurchaseSuccess()
                 dismiss()
 
             case .pending:
@@ -525,14 +529,11 @@ struct SubscriptionView: View {
                 )
 
             case .cancelled:
-                break
+                dismiss()
             }
 
         } catch {
-
-            showAlert(
-                "The purchase could not be completed. Please try again."
-            )
+            dismiss()
         }
     }
 
@@ -545,6 +546,8 @@ struct SubscriptionView: View {
             try await storeKit.restorePurchases()
 
             if storeKit.hasPremiumEntitlement {
+                settings.updatePremiumEntitlement(true)
+                onPurchaseSuccess()
                 dismiss()
 
             } else {

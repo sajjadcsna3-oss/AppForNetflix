@@ -79,12 +79,13 @@ struct SettingsView: View {
                         title: "Region",
                         subtitle: L10n.string("Content availability region", languageCode: settings.languageCode)
                     ) {
+                        premiumIndicator
                         SettingsDropdown(
                             items: Country.all.map(\.name),
                             label: { name in
                                 "\(Country.find(name).flag) \(L10n.string(name, languageCode: settings.languageCode))"
                             },
-                            selection: $settings.region
+                            selection: premiumBinding($settings.region)
                         )
                     }
                 }
@@ -94,12 +95,13 @@ struct SettingsView: View {
                         title: "Video Quality",
                         subtitle: L10n.string("Preferred quality for playback handled by this app", languageCode: settings.languageCode)
                     ) {
+                        premiumIndicator
                         SettingsDropdown(
                             items: videoQualities,
                             label: {
                                 L10n.string($0, languageCode: settings.languageCode)
                             },
-                            selection: $settings.videoQuality
+                            selection: videoQualityBinding
                         )
                     }
 
@@ -504,19 +506,69 @@ struct SettingsView: View {
 
             Spacer()
 
+            if !settings.canConnect(platform, isPremium: isPremiumUser) {
+                premiumIndicator
+            }
+
             connectionBadge(
-                isConnected:
-                    settings.isConnected(platform)
+                isConnected: settings
+                    .effectiveConnectedPlatformIDs(isPremium: isPremiumUser)
+                    .contains(platform.id)
             )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .contentShape(Rectangle())
         .onTapGesture {
-            settings.toggleConnection(
-                for: platform
-            )
+            if settings.canConnect(platform, isPremium: isPremiumUser) {
+                settings.toggleConnection(for: platform)
+            } else {
+                router.showSubscription()
+            }
         }
+    }
+
+    private var isPremiumUser: Bool {
+        storeKit.entitlementState == .loading
+            ? settings.isPremium
+            : storeKit.hasPremiumEntitlement
+    }
+
+    private var premiumIndicator: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "lock.fill")
+            Text("PRO")
+        }
+        .font(.system(size: 9, weight: .bold))
+        .foregroundStyle(Theme.textTertiary)
+        .opacity(isPremiumUser ? 0 : 1)
+    }
+
+    private func premiumBinding<Value>(_ binding: Binding<Value>) -> Binding<Value> {
+        Binding(
+            get: { binding.wrappedValue },
+            set: { newValue in
+                if isPremiumUser {
+                    binding.wrappedValue = newValue
+                } else {
+                    router.showSubscription()
+                }
+            }
+        )
+    }
+
+    private var videoQualityBinding: Binding<String> {
+        Binding(
+            get: { settings.videoQuality },
+            set: { quality in
+                let isPremiumQuality = quality == "Auto (4K)" || quality == "4K"
+                if isPremiumQuality && !isPremiumUser {
+                    router.showSubscription()
+                } else {
+                    settings.videoQuality = quality
+                }
+            }
+        )
     }
 
     private func connectionBadge(
