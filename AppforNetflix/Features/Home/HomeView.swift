@@ -74,6 +74,7 @@ struct HomeView: View {
         .sheet(item: $router.presentedMovie) { movie in
             MovieDetailView(
                 movie: movie,
+                selectedProviderIDs: router.presentedProviderIDs,
                 watchlistViewModel: watchlistViewModel,
                 recentViewModel: recentViewModel
             )
@@ -114,7 +115,7 @@ struct HomeView: View {
     }
 
     private var regionCode: String {
-        Country.find(settings.region).code
+        settings.regionCode
     }
 
     // FIX: Settings "Connected" platforms are only a preference.
@@ -123,7 +124,7 @@ struct HomeView: View {
         HomeLoadContext(
             section: router.selectedSection,
             genre: router.selectedGenre,
-            platform: settings.selectedPlatform,
+            selectedProviderID: activeSelectedProviderID,
             connectedPlatformIDs: settings.effectiveConnectedPlatformIDs(isPremium: isPremiumUser),
             region: regionCode,
             rating: viewModel.ratingFilter,
@@ -157,8 +158,8 @@ struct HomeView: View {
 
                     if searchText.isEmpty && !isPlainHome {
                         PlatformFilterBar(
-                            platforms: Platform.filterBar,
-                            selected: $settings.selectedPlatform
+                            providers: settings.availableWatchProviders,
+                            selectedProviderID: $settings.selectedProviderID
                         )
                         .padding(.horizontal, 24)
                         .padding(.bottom, 20)
@@ -203,10 +204,10 @@ struct HomeView: View {
     }
 
     private var homeFilterTitle: String {
-        if let platform = settings.selectedPlatform {
+        if let provider = selectedQuickFilterProvider {
             return String(
                 format: L10n.string("on_platform_format", languageCode: settings.languageCode),
-                platform.name
+                provider.name
             )
         }
 
@@ -233,7 +234,7 @@ struct HomeView: View {
                 if let featured = viewModel.featured {
                     HeroBanner(
                         movie: featured,
-                        onWatch: { router.showDetails(for: featured) },
+                        onWatch: { showDetails(for: featured) },
                         onToggleWatchlist: {
                             if !isPremiumUser {
                                 router.showSubscription(then: .addToWatchlist(featured))
@@ -242,7 +243,7 @@ struct HomeView: View {
                             }
                         },
                         onInfo: {
-                            router.showDetails(for: featured)
+                            showDetails(for: featured)
                         },
                         isSaved: isPremiumUser
                             && watchlistViewModel.isSaved(featured),
@@ -252,8 +253,8 @@ struct HomeView: View {
                 }
 
                 PlatformFilterBar(
-                    platforms: Platform.filterBar,
-                    selected: $settings.selectedPlatform
+                    providers: settings.availableWatchProviders,
+                    selectedProviderID: $settings.selectedProviderID
                 )
                 .padding(.horizontal, 24)
 
@@ -262,7 +263,7 @@ struct HomeView: View {
                     movies: viewModel.continueWatching,
                     isLandscape: true,
                     onSelect: {
-                        router.showDetails(for: $0)
+                        showDetails(for: $0)
                     },
                     onSeeAll: {
                         seeAllList = .continueWatching
@@ -275,7 +276,7 @@ struct HomeView: View {
                     movies: viewModel.trending,
                     isLandscape: false,
                     onSelect: {
-                        router.showDetails(for: $0)
+                        showDetails(for: $0)
                     },
                     onSeeAll: {
                         seeAllList = .trending
@@ -298,13 +299,34 @@ struct HomeView: View {
             if !watchlistViewModel.isSaved(movie) {
                 watchlistViewModel.toggle(movie)
             }
+        case .enablePlatforms(let providerIDs):
+            settings.setConnectedProviderIDs(
+                settings.connectedPlatformIDs.union(providerIDs)
+            )
+        case .selectProvider(let providerID):
+            settings.connectedPlatformIDs.insert(providerID)
+            settings.selectedProviderID = providerID
         }
     }
 
+    private var selectedQuickFilterProvider: WatchProvider? {
+        guard let selectedProviderID = activeSelectedProviderID else { return nil }
+        return settings.enabledWatchProviders.first { $0.id == selectedProviderID }
+    }
+
+    /// Prevent a persisted or externally-mutated Premium provider ID from
+    /// affecting content before StoreKit has verified current ownership.
+    private var activeSelectedProviderID: Int? {
+        guard let selectedProviderID = settings.selectedProviderID else { return nil }
+        guard storeKit.hasPremiumEntitlement
+                || SettingsStore.freeProviderIDs.contains(selectedProviderID) else {
+            return nil
+        }
+        return selectedProviderID
+    }
+
     private var isPremiumUser: Bool {
-        storeKit.entitlementState == .loading
-            ? settings.isPremium
-            : storeKit.hasPremiumEntitlement
+        storeKit.hasPremiumEntitlement
     }
 
     private func presentInitialSubscriptionIfNeeded() {
@@ -373,7 +395,7 @@ struct HomeView: View {
             ) {
                 ForEach(movies) { movie in
                     MovieCard(movie: movie) {
-                        router.showDetails(for: movie)
+                        showDetails(for: movie)
                     }
                 }
             }
@@ -443,7 +465,7 @@ struct HomeView: View {
                     .frame(height: 380)
                 } else {
                     PosterGrid(movies: results) {
-                        router.showDetails(for: $0)
+                        showDetails(for: $0)
                     }
                     .padding(.horizontal, 24)
                 }
@@ -454,11 +476,11 @@ struct HomeView: View {
 
     // UPDATED: adds a message specific to "connected but nothing found"
     private func emptyResultsMessage(title: String) -> String {
-        if let platform = settings.selectedPlatform {
+        if let provider = selectedQuickFilterProvider {
             return L10n.format(
                 "platform_filter_empty_format",
                 languageCode: settings.languageCode,
-                platform.name,
+                provider.name,
                 L10n.string(settings.region, languageCode: settings.languageCode)
             )
         }
@@ -500,10 +522,20 @@ struct HomeView: View {
             .frame(height: 400)
         } else {
             PosterGrid(movies: viewModel.searchResults) {
-                router.showDetails(for: $0)
+                showDetails(for: $0)
             }
             .padding(24)
         }
+    }
+
+    private func showDetails(for movie: Movie) {
+        let providerIDs: Set<Int>
+        if let providerID = activeSelectedProviderID {
+            providerIDs = [providerID]
+        } else {
+            providerIDs = settings.effectiveConnectedPlatformIDs(isPremium: isPremiumUser)
+        }
+        router.showDetails(for: movie, providerIDs: providerIDs)
     }
 }
 

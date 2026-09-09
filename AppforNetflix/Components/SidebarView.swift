@@ -73,9 +73,7 @@ struct SidebarView: View {
     }
 
     private var isPremiumUser: Bool {
-        storeKit.entitlementState == .loading
-            ? settings.isPremium
-            : storeKit.hasPremiumEntitlement
+        storeKit.hasPremiumEntitlement
     }
 
     private func genreRow(_ genre: Genre) -> some View {

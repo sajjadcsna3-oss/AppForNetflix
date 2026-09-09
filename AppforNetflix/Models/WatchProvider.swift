@@ -2,12 +2,16 @@ import Foundation
 
 enum WatchMonetizationType: String, Codable, Hashable, CaseIterable {
     case flatrate
+    case free
+    case ads
     case rent
     case buy
 
     var label: String {
         switch self {
         case .flatrate: "Stream"
+        case .free: "Free"
+        case .ads: "Free with ads"
         case .rent: "Rent"
         case .buy: "Buy"
         }
@@ -31,6 +35,7 @@ struct WatchProvider: Identifiable, Codable, Hashable {
             .filter(monetizationTypes.contains)
             .map(\.label)
             .joined(separator: " / ")
+
     }
 }
 

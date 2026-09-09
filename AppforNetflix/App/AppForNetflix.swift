@@ -4,6 +4,7 @@ import FirebaseCore
 
 @main
 struct AppForNetflix: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var router = AppRouter()
     @StateObject private var settingsStore = SettingsStore()
     @StateObject private var authStore: AuthStore
@@ -34,6 +35,10 @@ struct AppForNetflix: App {
                 }
                 .onChange(of: storeKit.purchasedProductIDs) {
                     settingsStore.updatePremiumEntitlement(storeKit.hasPremiumEntitlement)
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .active else { return }
+                    Task { await storeKit.refreshEntitlements() }
                 }
         }
         .modelContainer(for: [WatchlistItem.self, RecentlyViewedItem.self])

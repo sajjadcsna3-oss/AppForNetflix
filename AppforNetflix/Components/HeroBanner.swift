@@ -117,14 +117,15 @@ struct HeroBanner: View {
 
     private func compactProviderBadge(_ platform: WatchProvider) -> some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(providerColor(for: platform))
-                .frame(width: 5, height: 5)
-
-            Text(platform.name)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.82))
-                .lineLimit(1)
+            AsyncImage(url: platform.logoURL) { phase in
+                if case .success(let image) = phase {
+                    image.resizable().scaledToFit()
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(width: 35, height: 35)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 6)
@@ -135,12 +136,5 @@ struct HeroBanner: View {
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
         .fixedSize(horizontal: true, vertical: false)
-    }
-
-    private func providerColor(for platform: WatchProvider) -> Color {
-        let name = platform.name.lowercased()
-        if name.contains("netflix") { return Theme.accent }
-        if name.contains("prime") || name.contains("amazon") { return Color(hex: "00A8E1") }
-        return .white.opacity(0.65)
     }
 }

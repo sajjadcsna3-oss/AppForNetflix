@@ -32,13 +32,13 @@ enum Theme {
     }
 
     static var textPrimary: Color {
-        Color(light: .black, dark: .white)
+        .primary
     }
     static var textSecondary: Color {
-        Color(light: .black.opacity(0.65), dark: .white.opacity(0.65))
+        .secondary
     }
     static var textTertiary: Color {
-        Color(light: .black.opacity(0.4), dark: .white.opacity(0.4))
+        Color.primary.opacity(0.45)
     }
 
     static let success = Color(hex: "3DDC84")

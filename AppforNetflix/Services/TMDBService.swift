@@ -56,9 +56,15 @@ actor TMDBService {
         let results: [String: CountryWatchProviders]
     }
 
+    private struct WatchProviderCatalogResponse: Decodable {
+        let results: [ProviderItem]
+    }
+
     private struct CountryWatchProviders: Decodable {
         let link: URL?
         let flatrate: [ProviderItem]?
+        let free: [ProviderItem]?
+        let ads: [ProviderItem]?
         let rent: [ProviderItem]?
         let buy: [ProviderItem]?
     }
@@ -216,7 +222,7 @@ actor TMDBService {
                     .joined(separator: "|")
 
             // TMDB needs the region to know where the provider is available.
-            query["watch_region"] = region
+            query["watch_region"] = region.uppercased()
 
             // Include normal subscription services and free/ad-supported
             // availability where TMDB provides it.
@@ -291,6 +297,8 @@ actor TMDBService {
 
         var providersByID: [Int: WatchProvider] = [:]
         merge(country.flatrate, type: .flatrate, into: &providersByID)
+        merge(country.free, type: .free, into: &providersByID)
+        merge(country.ads, type: .ads, into: &providersByID)
         merge(country.rent, type: .rent, into: &providersByID)
         merge(country.buy, type: .buy, into: &providersByID)
 
@@ -303,6 +311,43 @@ actor TMDBService {
                 return $0.displayPriority < $1.displayPriority
             }
         )
+    }
+
+    /// Returns TMDB's movie-provider catalog for a specific watch region.
+    /// Provider IDs and logos come directly from TMDB and are safe to use in
+    /// subsequent `discover/movie` requests.
+    func movieWatchProviders(region: String? = nil) async throws -> [WatchProvider] {
+        let query = region.map { ["watch_region": $0.uppercased()] } ?? [:]
+        let url = makeURL(
+            path: "watch/providers/movie",
+            query: query
+        )
+
+        let (data, response) = try await session.data(from: url)
+        try Self.validate(response)
+
+        do {
+            return try JSONDecoder()
+                .decode(WatchProviderCatalogResponse.self, from: data)
+                .results
+                .map {
+                    WatchProvider(
+                        id: $0.providerID,
+                        name: $0.providerName,
+                        logoPath: $0.logoPath,
+                        displayPriority: $0.displayPriority,
+                        monetizationTypes: []
+                    )
+                }
+                .sorted {
+                    if $0.displayPriority == $1.displayPriority {
+                        return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                    }
+                    return $0.displayPriority < $1.displayPriority
+                }
+        } catch {
+            throw NetworkError.decoding
+        }
     }
 
     // MARK: - Credits

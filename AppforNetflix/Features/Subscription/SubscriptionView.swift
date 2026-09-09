@@ -206,23 +206,6 @@ struct SubscriptionView: View {
                 )
                 .font(Theme.Font.title(22))
                 .fontWeight(.bold)
-
-                Spacer()
-
-                Button(
-                    L10n.string(
-                        "Restore",
-                        languageCode: settings.languageCode
-                    )
-                ) {
-                    Task {
-                        await restorePurchases()
-                    }
-                }
-                .buttonStyle(.plain)
-                .font(Theme.Font.body(13))
-                .foregroundStyle(Theme.accent)
-                .disabled(storeKit.isLoading)
             }
             .padding(.bottom, 8)
 
@@ -334,7 +317,7 @@ struct SubscriptionView: View {
 
                         Text(
                             L10n.string(
-                                plan.title,
+                                displayName(for: plan),
                                 languageCode: settings.languageCode
                             )
                         )
@@ -348,7 +331,7 @@ struct SubscriptionView: View {
 
                     Text(
                         L10n.string(
-                            plan.detail,
+                            displayDescription(for: plan),
                             languageCode: settings.languageCode
                         )
                     )
@@ -371,11 +354,11 @@ struct SubscriptionView: View {
                     .font(Theme.Font.heading(20))
                     .fontWeight(.bold)
 
-                    if !plan.period.isEmpty {
+                    if !displayPeriod(for: plan).isEmpty {
 
                         Text(
                             L10n.string(
-                                plan.period,
+                                displayPeriod(for: plan),
                                 languageCode: settings.languageCode
                             )
                         )
@@ -468,7 +451,30 @@ struct SubscriptionView: View {
         if let product = storeKit.product(for: plan) {
             return product.displayPrice
         }
-        return storeKit.isConfigured ? "—" : plan.previewPrice
+        return "—"
+    }
+
+    private func displayName(for plan: SubscriptionPlan) -> String {
+        storeKit.product(for: plan)?.displayName ?? plan.title
+    }
+
+    private func displayDescription(for plan: SubscriptionPlan) -> String {
+        storeKit.product(for: plan)?.description ?? plan.detail
+    }
+
+    private func displayPeriod(for plan: SubscriptionPlan) -> String {
+        guard let product = storeKit.product(for: plan) else { return plan.period }
+        guard let period = product.subscription?.subscriptionPeriod else { return "" }
+        let unit: String
+        switch period.unit {
+        case .day: unit = period.value == 1 ? "day" : "days"
+        case .week: unit = period.value == 1 ? "week" : "weeks"
+        case .month: unit = period.value == 1 ? "month" : "months"
+        case .year: unit = period.value == 1 ? "year" : "years"
+        @unknown default: return ""
+        }
+        let localizedUnit = L10n.string(unit, languageCode: settings.languageCode)
+        return period.value == 1 ? "/\(localizedUnit)" : "/\(period.value) \(localizedUnit)"
     }
 
     private func badge(for plan: SubscriptionPlan) -> String? {
@@ -529,39 +535,11 @@ struct SubscriptionView: View {
                 )
 
             case .cancelled:
-                dismiss()
+                break
             }
 
         } catch {
-            dismiss()
-        }
-    }
-
-    // MARK: - Restore
-
-    private func restorePurchases() async {
-
-        do {
-
-            try await storeKit.restorePurchases()
-
-            if storeKit.hasPremiumEntitlement {
-                settings.updatePremiumEntitlement(true)
-                onPurchaseSuccess()
-                dismiss()
-
-            } else {
-
-                showAlert(
-                    "No previous purchases were found."
-                )
-            }
-
-        } catch {
-
-            showAlert(
-                "Purchases could not be restored. Please try again."
-            )
+            showAlert(error.localizedDescription)
         }
     }
 

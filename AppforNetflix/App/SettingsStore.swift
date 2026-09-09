@@ -3,7 +3,10 @@ import Combine
 
 @MainActor
 final class SettingsStore: ObservableObject {
-    static let freePlatformConnectionLimit = 1
+    static let freeProviderIDs: Set<Int> = [
+        Platform.netflix.id,
+        Platform.primeVideo.id
+    ]
     @Published var region: String { didSet { defaults.set(region, forKey: Keys.region) } }
     @Published var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
     @Published var videoQuality: String { didSet { defaults.set(videoQuality, forKey: Keys.videoQuality) } }
@@ -14,11 +17,12 @@ final class SettingsStore: ObservableObject {
     @Published var userName: String { didSet { defaults.set(userName, forKey: Keys.userName) } }
     @Published var userEmail: String { didSet { defaults.set(userEmail, forKey: Keys.userEmail) } }
     @Published var connectedPlatformIDs: Set<Int> { didSet { defaults.set(Array(connectedPlatformIDs), forKey: Keys.connectedPlatforms) } }
+    @Published private(set) var availableWatchProviders: [WatchProvider] = []
     @Published var appearance: AppColorScheme { didSet { defaults.set(appearance.rawValue, forKey: Keys.appearance) } }
 
-    // One shared selection used by Home filter bar and TopBar.
-    @Published var selectedPlatform: Platform? {
-        didSet { defaults.set(selectedPlatform?.id, forKey: Keys.selectedPlatform) }
+    /// Quick filter used only by the lower Home provider row.
+    @Published var selectedProviderID: Int? {
+        didSet { defaults.set(selectedProviderID, forKey: Keys.selectedPlatform) }
     }
 
     private let defaults: UserDefaults
@@ -40,7 +44,9 @@ final class SettingsStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.region = defaults.string(forKey: Keys.region) ?? "Kingdom of Qatar"
+        self.region = Country.find(
+            defaults.string(forKey: Keys.region) ?? "QA"
+        ).name
         self.language = AppLanguage.normalizedCode(
             defaults.string(forKey: Keys.language) ?? "en"
         )
@@ -54,57 +60,98 @@ final class SettingsStore: ObservableObject {
         self.userEmail = defaults.string(forKey: Keys.userEmail) ?? ""
 
         let stored = defaults.array(forKey: Keys.connectedPlatforms) as? [Int]
-            ?? [Platform.netflix.id, Platform.primeVideo.id, Platform.appleTVPlus.id, Platform.max.id, Platform.hulu.id]
+            ?? Array(Self.freeProviderIDs)
         self.connectedPlatformIDs = Set(stored)
 
         let appearanceRaw = defaults.string(forKey: Keys.appearance) ?? AppColorScheme.dark.rawValue
         self.appearance = AppColorScheme(rawValue: appearanceRaw) ?? .dark
 
-        let storedPlatformID = defaults.object(forKey: Keys.selectedPlatform) as? Int
-        self.selectedPlatform = storedPlatformID.flatMap { id in
-            Platform.filterBar.first { $0.id == id }
-        }
+        self.selectedProviderID = defaults.object(forKey: Keys.selectedPlatform) as? Int
 
         // Persist migration from a formerly exposed but incomplete locale so
         // localization calls that do not receive the store still agree.
         defaults.set(self.language, forKey: Keys.language)
+        defaults.set(self.region, forKey: Keys.region)
     }
 
+    /// Normalized ISO 3166-1 alpha-2 code used for every regional TMDB call.
+    var regionCode: String { Country.find(region).code.uppercased() }
+
     func toggleConnection(for platform: Platform) {
-        if connectedPlatformIDs.contains(platform.id) {
-            connectedPlatformIDs.remove(platform.id)
+        toggleConnection(providerID: resolvedProviderID(for: platform))
+    }
+
+    func toggleConnection(providerID: Int) {
+        if connectedPlatformIDs.contains(providerID) {
+            connectedPlatformIDs.remove(providerID)
             // A disconnected service cannot remain the active Home filter.
-            if selectedPlatform?.id == platform.id {
-                selectedPlatform = nil
+            if selectedProviderID == providerID {
+                selectedProviderID = nil
             }
         } else {
-            connectedPlatformIDs.insert(platform.id)
+            connectedPlatformIDs.insert(providerID)
         }
     }
 
     func isConnected(_ platform: Platform) -> Bool {
-        connectedPlatformIDs.contains(platform.id)
+        connectedPlatformIDs.contains(resolvedProviderID(for: platform))
+    }
+
+    func isConnected(providerID: Int) -> Bool {
+        connectedPlatformIDs.contains(providerID)
+    }
+
+    func setConnectedProviderIDs(_ providerIDs: Set<Int>) {
+        connectedPlatformIDs = providerIDs
+        if let selectedProviderID, !providerIDs.contains(selectedProviderID) {
+            self.selectedProviderID = nil
+        }
+    }
+
+    func updateAvailableWatchProviders(_ providers: [WatchProvider]) {
+        availableWatchProviders = providers
+        reconcileConnectedProviders(availableProviderIDs: Set(providers.map(\.id)))
+    }
+
+    var enabledWatchProviders: [WatchProvider] {
+        availableWatchProviders.filter { connectedPlatformIDs.contains($0.id) }
+    }
+
+    private func reconcileConnectedProviders(availableProviderIDs: Set<Int>) {
+        let validSelection = connectedPlatformIDs.intersection(availableProviderIDs)
+        if validSelection != connectedPlatformIDs {
+            setConnectedProviderIDs(validSelection)
+        }
     }
 
     func effectiveConnectedPlatformIDs(isPremium: Bool) -> Set<Int> {
-        guard !isPremium else { return connectedPlatformIDs }
-        let allowedIDs = Platform.all
-            .map(\.id)
-            .filter(connectedPlatformIDs.contains)
-            .prefix(Self.freePlatformConnectionLimit)
-        return Set(allowedIDs)
+        isPremium
+            ? connectedPlatformIDs
+            : connectedPlatformIDs.intersection(Self.freeProviderIDs)
     }
 
     func canConnect(_ platform: Platform, isPremium: Bool) -> Bool {
-        if isPremium { return true }
-        let effectiveIDs = effectiveConnectedPlatformIDs(isPremium: false)
-        if isConnected(platform) { return effectiveIDs.contains(platform.id) }
-        return effectiveIDs.count < Self.freePlatformConnectionLimit
+        canConnect(providerID: resolvedProviderID(for: platform), isPremium: isPremium)
+    }
+
+    func canConnect(providerID: Int, isPremium: Bool) -> Bool {
+        isPremium || Self.freeProviderIDs.contains(providerID)
+    }
+
+    func resolvedProviderID(for platform: Platform) -> Int {
+        availableWatchProviders.first {
+            platform.tmdbProviderIDs.contains($0.id)
+        }?.id ?? platform.tmdbProviderID ?? platform.id
     }
 
     func updatePremiumEntitlement(_ isPremium: Bool) {
         self.isPremium = isPremium
         defaults.set(isPremium, forKey: Keys.isPremiumUser)
+        if !isPremium {
+            setConnectedProviderIDs(
+                connectedPlatformIDs.intersection(Self.freeProviderIDs)
+            )
+        }
         if !isPremium && (videoQuality == "Auto (4K)" || videoQuality == "4K") {
             videoQuality = "1080p"
         }
@@ -113,7 +160,7 @@ final class SettingsStore: ObservableObject {
     func clearAccountData() {
         userName = ""
         userEmail = ""
-        selectedPlatform = nil
+        selectedProviderID = nil
         connectedPlatformIDs = []
     }
 }

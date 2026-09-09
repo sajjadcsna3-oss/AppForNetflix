@@ -41,6 +41,8 @@ enum SidebarSection: String, CaseIterable, Identifiable {
 enum PremiumDestination: Equatable {
     case section(SidebarSection)
     case addToWatchlist(Movie)
+    case enablePlatforms(Set<Int>)
+    case selectProvider(Int)
 }
 
 @MainActor
@@ -50,6 +52,7 @@ final class AppRouter: ObservableObject {
     @Published var selectedGenre: Genre?
 
     @Published var presentedMovie: Movie?
+    private(set) var presentedProviderIDs: Set<Int> = []
     @Published var isShowingSubscription = false
     private(set) var pendingPremiumDestination: PremiumDestination?
 
@@ -63,7 +66,8 @@ final class AppRouter: ObservableObject {
         selectedSection = .home
     }
 
-    func showDetails(for movie: Movie) {
+    func showDetails(for movie: Movie, providerIDs: Set<Int> = []) {
+        presentedProviderIDs = providerIDs
         presentedMovie = movie
     }
 

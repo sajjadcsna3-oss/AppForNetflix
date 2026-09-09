@@ -4,7 +4,7 @@ import Combine
 struct HomeLoadContext: Equatable {
     var section: SidebarSection
     var genre: Genre?
-    var platform: Platform?
+    var selectedProviderID: Int?
     var connectedPlatformIDs: Set<Int>   // NEW: user's "Connected" platforms from Settings
     var region: String
     var rating: Double
@@ -12,12 +12,12 @@ struct HomeLoadContext: Equatable {
     var language: String
 
     static let initial = HomeLoadContext(
-        section: .home, genre: nil, platform: nil, connectedPlatformIDs: [],
+        section: .home, genre: nil, selectedProviderID: nil, connectedPlatformIDs: [],
         region: "US", rating: 0, year: "All Years", language: "en"
     )
 
     var needsGridLayout: Bool {
-        genre != nil || platform != nil || section != .home || rating > 0 || year != "All Years"
+        genre != nil || selectedProviderID != nil || section != .home || rating > 0 || year != "All Years"
     }
 }
 
@@ -92,15 +92,12 @@ final class HomeViewModel: ObservableObject {
             return try await service.trending(region: region, page: 1)
         }
         let filtered = try await service.discover(
-            providerIDs: connectedPlatformIDs.compactMap { appID in
-                Platform.all.first(where: { $0.id == appID })?.tmdbProviderID
-            }.sorted(),
+            providerIDs: connectedPlatformIDs.sorted(),
             region: region,
             intent: .popular,
             page: 1
         )
-        if !filtered.movies.isEmpty { return filtered }
-        return try await service.trending(region: region, page: 1)
+        return filtered
     }
     
     // NEW
@@ -109,18 +106,12 @@ final class HomeViewModel: ObservableObject {
             return try await service.nowPlaying(region: region, page: 1)
         }
         let filtered = try await service.discover(
-            providerIDs: connectedPlatformIDs.compactMap { appID in
-                Platform.all.first(where: { $0.id == appID })?.tmdbProviderID
-            }.sorted(),
+            providerIDs: connectedPlatformIDs.sorted(),
             region: region,
             intent: .nowPlaying,
             page: 1
         )
-        if !filtered.movies.isEmpty { return filtered }
-
-        let regional = try await service.nowPlaying(region: region, page: 1)
-        if !regional.movies.isEmpty || region == "US" { return regional }
-        return try await service.nowPlaying(region: "US", page: 1)
+        return filtered
     }
     
     private func fetchAllPages(context: HomeLoadContext) async throws -> [Movie] {
@@ -151,24 +142,10 @@ final class HomeViewModel: ObservableObject {
         let minRating = context.rating > 0 ? context.rating : nil
         let year = context.year == "All Years" ? nil : context.year
         
-        // A platform selected in the Home filter always wins over the
-        // Settings "Connected" list. Only real TMDB provider IDs are sent.
-        // iMax is a UI/branding item and intentionally has no TMDB provider ID.
-        let providerIDs: [Int] = {
-            if let platform = context.platform, let providerID = platform.tmdbProviderID {
-                return [providerID]
-            }
-            return context.connectedPlatformIDs.compactMap { appID in
-                Platform.all.first(where: { $0.id == appID })?.tmdbProviderID
-            }.sorted()
-        }()
-        
-        // If the selected item has no TMDB provider ID (currently iMax),
-        // do NOT fall back to an unfiltered movie list. That would make an
-        // unsupported platform look like it was working.
-        if context.platform != nil && providerIDs.isEmpty {
-            return TMDBService.Page(movies: [], currentPage: page, totalPages: 1)
-        }
+        // A quick-filter provider wins over the complete enabled-provider set.
+        // Both values contain only real IDs returned by TMDB's regional catalog.
+        let providerIDs = context.selectedProviderID.map { [$0] }
+            ?? context.connectedPlatformIDs.sorted()
         
         let needsDiscover = context.genre != nil || !providerIDs.isEmpty || minRating != nil || year != nil
         
@@ -184,19 +161,9 @@ final class HomeViewModel: ObservableObject {
             )
             if !filtered.movies.isEmpty { return filtered }
 
-            // Preserve explicit genre/rating/year filters, but drop provider
-            // availability when that country has no matching catalog data.
-            if !providerIDs.isEmpty {
-                let regional = try await service.discover(
-                    genreID: context.genre?.id,
-                    region: context.region,
-                    intent: intent,
-                    minRating: minRating,
-                    year: year,
-                    page: page
-                )
-                if !regional.movies.isEmpty { return regional }
-            }
+            // An empty provider-filtered result is meaningful. Never replace it
+            // with unfiltered or another region's catalog.
+            if !providerIDs.isEmpty { return filtered }
 
             if context.region != "US" {
                 return try await service.discover(

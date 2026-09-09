@@ -231,17 +231,6 @@ struct SettingsView: View {
 
                         rowDivider
 
-                        if storeKit.isConfigured {
-                            settingsRow(
-                                title: "Subscription",
-                                subtitle: nil
-                            ) {
-                                subscriptionBadge
-                            }
-
-                            rowDivider
-                        }
-
                         Button {
                             auth.signOut()
                             settings.userName = ""
@@ -346,6 +335,7 @@ struct SettingsView: View {
                         .padding(.vertical, 14)
                     }
                 }
+
             }
             .padding(24)
         }
@@ -504,33 +494,25 @@ struct SettingsView: View {
                 .padding(.leading, 4)
 
             Spacer()
-
-            if !settings.canConnect(platform, isPremium: isPremiumUser) {
-                premiumIndicator
-            }
-
-            connectionBadge(
-                isConnected: settings
-                    .effectiveConnectedPlatformIDs(isPremium: isPremiumUser)
-                    .contains(platform.id)
-            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .contentShape(Rectangle())
         .onTapGesture {
-            if settings.canConnect(platform, isPremium: isPremiumUser) {
+            if settings.isConnected(platform) {
+                settings.toggleConnection(for: platform)
+            } else if settings.canConnect(platform, isPremium: isPremiumUser) {
                 settings.toggleConnection(for: platform)
             } else {
-                router.showSubscription()
+                router.showSubscription(
+                    then: .enablePlatforms([platform.tmdbProviderID ?? platform.id])
+                )
             }
         }
     }
 
     private var isPremiumUser: Bool {
-        storeKit.entitlementState == .loading
-            ? settings.isPremium
-            : storeKit.hasPremiumEntitlement
+        storeKit.hasPremiumEntitlement
     }
 
     private var premiumIndicator: some View {
@@ -567,64 +549,6 @@ struct SettingsView: View {
                     settings.videoQuality = quality
                 }
             }
-        )
-    }
-
-    private func connectionBadge(
-        isConnected: Bool
-    ) -> some View {
-        Text(L10n.string(
-            isConnected ? "Connected" : "Not Connected",
-            languageCode: settings.languageCode
-        ))
-        .font(
-            .system(
-                size: 12,
-                weight: .regular
-            )
-        )
-        .foregroundStyle(
-            isConnected
-                ? Color(hex: "28C840")
-                : Theme.textTertiary
-        )
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .background(
-            isConnected
-                ? Color(hex: "28C840").opacity(0.15)
-                : Theme.surfaceElevated
-        )
-        .clipShape(
-            RoundedRectangle(cornerRadius: 6)
-        )
-    }
-
-    private var subscriptionBadge: some View {
-        Text(L10n.string(
-            settings.isPremium ? "Premium" : "Free",
-            languageCode: settings.languageCode
-        ))
-        .font(
-            .system(
-                size: 12,
-                weight: .medium
-            )
-        )
-        .foregroundStyle(
-            settings.isPremium
-                ? Theme.accent
-                : Theme.textSecondary
-        )
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .background(
-            settings.isPremium
-                ? Theme.accent.opacity(0.15)
-                : Theme.surfaceElevated
-        )
-        .clipShape(
-            RoundedRectangle(cornerRadius: 6)
         )
     }
 

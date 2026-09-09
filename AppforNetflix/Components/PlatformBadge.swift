@@ -32,39 +32,63 @@ struct PlatformBadge: View {
 
 struct PlatformFilterBar: View {
     @EnvironmentObject private var settings: SettingsStore
-    let platforms: [Platform]
-    @Binding var selected: Platform?
+    @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var storeKit: StoreKitService
+    let providers: [WatchProvider]
+    @Binding var selectedProviderID: Int?
 
     private let baseLogoHeight: CGFloat = 14
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
-                Button { selected = nil } label: {
+                Button { selectedProviderID = nil } label: {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(selected == nil ? Color.white : Color.clear)
+                            .fill(selectedProviderID == nil ? Color.white : Color.clear)
                             .frame(width: 8, height: 8)
                         Text(L10n.string("All Platforms", languageCode: settings.languageCode))
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(selected == nil ? .white : .white.opacity(0.6))
+                            .foregroundStyle(selectedProviderID == nil ? .white : .white.opacity(0.6))
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(selected == nil ? Color.white.opacity(0.08) : Color.clear)
+                    .background(selectedProviderID == nil ? Color.white.opacity(0.08) : Color.clear)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
                 dividerLine
-                ForEach(Array(platforms.enumerated()), id: \.element.id) { index, platform in
-                    let isSelected = selected == platform
-                    Button { selected = platform } label: {
+                ForEach(Array(providers.enumerated()), id: \.element.id) { index, provider in
+                    let isSelected = selectedProviderID == provider.id
+                    let isLocked = Platform.definition(matching: provider)?.requiresPremium == true
+                        && !storeKit.hasPremiumEntitlement
+                    Button {
+                        if isLocked {
+                            router.showSubscription(then: .selectProvider(provider.id))
+                        } else {
+                            settings.connectedPlatformIDs.insert(provider.id)
+                            selectedProviderID = provider.id
+                        }
+                    } label: {
                         HStack(spacing: 6) {
-                            AppIconView(assetName: platform.logoAssetName, fallbackSymbol: "play.tv.fill", renderingMode: .original)
-                                .frame(height: baseLogoHeight * platform.logoScale)
-                            Text(platform.name)
+                            AsyncImage(url: provider.logoURL) { phase in
+                                if case .success(let image) = phase {
+                                    image.resizable().scaledToFit()
+                                } else {
+                                    Image(systemName: "play.tv.fill")
+                                        .foregroundStyle(.white.opacity(0.5))
+                                }
+                            }
+                            .frame(width: 20, height: baseLogoHeight)
+                            Text(provider.name)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(isSelected ? .white : .white.opacity(0.5))
+
+                            if isLocked {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -72,7 +96,7 @@ struct PlatformFilterBar: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
-                    if index < platforms.count - 1 {
+                    if index < providers.count - 1 {
                         dividerLine
                     }
                 }

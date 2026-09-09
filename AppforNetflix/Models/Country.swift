@@ -64,7 +64,11 @@ struct Country: Identifiable, Hashable {
         Country(code: "NG", name: "Nigeria")
     ]
 
-    static func find(_ name: String) -> Country {
-        all.first { $0.name == name } ?? all[0]
+    static func find(_ value: String) -> Country {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return all.first {
+            $0.code.caseInsensitiveCompare(normalized) == .orderedSame
+                || $0.name.caseInsensitiveCompare(normalized) == .orderedSame
+        } ?? all[0]
     }
 }

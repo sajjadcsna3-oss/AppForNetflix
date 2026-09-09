@@ -47,17 +47,6 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    // Used only to preserve the paywall preview on developer builds that have
-    // no product identifiers. Configured builds always display StoreKit prices.
-    var previewPrice: String {
-        switch self {
-        case .weekly: "$3.99"
-        case .monthly: "$7.99"
-        case .annual: "$29.99"
-        case .lifetime: "$39.99"
-        }
-    }
-
     // MARK: - Billing Period
 
     var period: String {
@@ -84,7 +73,7 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
             return "STARTER"
 
         case .monthly:
-            return "3-DAY FREE TRIAL"
+            return "FREE TRIAL"
 
         case .annual:
             return "BEST VALUE"

@@ -90,9 +90,7 @@ struct TopBar: View {
             // MARK: - Streaming Platforms
             // Same selection/state as the existing top bar.
             // Only the visual presentation has been changed.
-            OverlappingPlatformsView(
-                selectedPlatform: settings.selectedPlatform
-            )
+            StreamingPlatformSelector()
 
             HStack(spacing: 12) {
                 ratingDropdown
@@ -225,94 +223,7 @@ struct TopBar: View {
     }
 
     private var isPremiumUser: Bool {
-        storeKit.entitlementState == .loading
-            ? settings.isPremium
-            : storeKit.hasPremiumEntitlement
-    }
-}
-
-// MARK: - Platforms
-
-struct OverlappingPlatformsView: View {
-    @EnvironmentObject private var settings: SettingsStore
-    @EnvironmentObject private var storeKit: StoreKitService
-    let selectedPlatform: Platform?
-    var platforms: [Platform] = Platform.filterBar
-
-    // Same circular style as the reference UI.
-    private let badgeSize: CGFloat = 34
-    private let overlap: CGFloat = 11
-
-    private var displayedPlatforms: [Platform] {
-        if let selectedPlatform {
-            return [selectedPlatform]
-        }
-
-        let effectiveIDs = settings.effectiveConnectedPlatformIDs(isPremium: isPremiumUser)
-        let connected = platforms.filter { effectiveIDs.contains($0.id) }
-        return connected.isEmpty ? platforms : connected
-    }
-
-    private var isPremiumUser: Bool {
-        storeKit.entitlementState == .loading
-            ? settings.isPremium
-            : storeKit.hasPremiumEntitlement
-    }
-
-    var body: some View {
-        // Negative spacing creates the exact stacked/overlapping sequence:
-        // 1st circle behind 2nd, 2nd behind 3rd, etc.
-        HStack(spacing: -overlap) {
-            ForEach(Array(displayedPlatforms.enumerated()), id: \.element.id) { index, platform in
-                Button {
-                    // TopBar icon remains a quick Home platform filter.
-                    // Clicking the active platform returns to All Platforms.
-                    settings.selectedPlatform =
-                        settings.selectedPlatform?.id == platform.id
-                        ? nil
-                        : platform
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                settings.selectedPlatform?.id == platform.id
-                                    ? platform.color.opacity(0.22)
-                                    : Color(hex: "17181D")
-                            )
-
-                        Circle()
-                            .stroke(
-                                settings.selectedPlatform?.id == platform.id
-                                    ? platform.color.opacity(0.70)
-                                    : Color.white.opacity(0.12),
-                                lineWidth: 1
-                            )
-
-                        AppIconView(
-                            assetName: platform.logoAssetName,
-                            fallbackSymbol: "play.tv.fill",
-                            renderingMode: .original
-                        )
-                        .frame(width: 20, height: 16)
-                        .clipped()
-                    }
-                    .frame(width: badgeSize, height: badgeSize)
-                    .contentShape(Circle())
-                    .shadow(
-                        color: .black.opacity(0.30),
-                        radius: 4,
-                        x: 0,
-                        y: 1
-                    )
-                }
-                .buttonStyle(.plain)
-                // Higher index = later platform = visually on top.
-                .zIndex(Double(index))
-                .help(platform.name)
-            }
-        }
-        .padding(.trailing, 8)
-        .animation(.easeOut(duration: 0.15), value: selectedPlatform)
+        storeKit.hasPremiumEntitlement
     }
 }
 

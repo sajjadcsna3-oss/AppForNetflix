@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MovieDetailView: View {
     let movie: Movie
+    let selectedProviderIDs: Set<Int>
     let watchlistViewModel: WatchlistViewModel
     let recentViewModel: RecentViewModel
 
@@ -13,13 +14,15 @@ struct MovieDetailView: View {
 
     @State private var isSaved = false
     @State private var platforms: [WatchProvider] = []
-    @State private var watchProvidersLink: URL?
     @State private var cast: [CastMember] = []
     @State private var similar: [Movie] = []
     @State private var isLoadingExtras = true
     @State private var isShowingSubscription = false
     @State private var shouldAddToWatchlistAfterPurchase = false
     @State private var isShowingPurchaseSuccess = false
+    @State private var isShowingProviderPicker = false
+    @State private var watchMessage: String?
+    @State private var providerLoadError: String?
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -99,7 +102,7 @@ struct MovieDetailView: View {
 
                             HStack(spacing: 12) {
                                 Button {
-                                    openURL(watchNowURL())
+                                    openWatchDestination()
                                 } label: {
                                     Label(
                                         L10n.string("Watch Now", languageCode: settings.languageCode),
@@ -113,6 +116,7 @@ struct MovieDetailView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                                 .buttonStyle(.plain)
+                                .disabled(isLoadingExtras)
 
                                 Button {
                                     if !isPremiumUser {
@@ -209,7 +213,7 @@ struct MovieDetailView: View {
                         } else {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 10) {
-                                    ForEach(platforms) { platform in
+                                    ForEach(displayedPlatforms) { platform in
                                         HeroPlatformBadge(platform: platform)
                                     }
                                 }
@@ -260,7 +264,7 @@ struct MovieDetailView: View {
                         sectionContainer(title: L10n.string("SIMILAR TITLES", languageCode: settings.languageCode)) {
                             HorizontalScrollWithArrows(items: Array(similar.prefix(12))) { item in
                                 MovieCard(movie: item) {
-                                    router.showDetails(for: item)
+                                    router.showDetails(for: item, providerIDs: selectedProviderIDs)
                                 }
                                 .frame(width: 150)
                             }
@@ -298,12 +302,17 @@ struct MovieDetailView: View {
                 recentViewModel.record(movie)
             }
         }
-        .task(id: settings.languageCode) {
+        .task(id: "\(settings.languageCode)|\(regionCode)") {
             await loadExtras()
         }
         .sheet(isPresented: $isShowingSubscription, onDismiss: continueWatchlistAddition) {
             SubscriptionView {
                 isShowingPurchaseSuccess = true
+            }
+        }
+        .sheet(isPresented: $isShowingProviderPicker) {
+            StreamingProviderPicker(providers: contextualWatchProviders) { provider in
+                open(provider)
             }
         }
         .alert(
@@ -313,6 +322,17 @@ struct MovieDetailView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(L10n.string("Your purchase was successful.", languageCode: settings.languageCode))
+        }
+        .alert(
+            L10n.string("Watch Now", languageCode: settings.languageCode),
+            isPresented: Binding(
+                get: { watchMessage != nil },
+                set: { if !$0 { watchMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { watchMessage = nil }
+        } message: {
+            Text(watchMessage ?? "")
         }
     }
 
@@ -328,33 +348,31 @@ struct MovieDetailView: View {
     }
 
     private var isPremiumUser: Bool {
-        storeKit.entitlementState == .loading
-            ? settings.isPremium
-            : storeKit.hasPremiumEntitlement
+        storeKit.hasPremiumEntitlement
     }
 
     private func loadExtras() async {
         isLoadingExtras = true
-        let region = Country.find(settings.region).code
-
-        async let providerAvailability = loadWatchProviders(region: region)
         async let credits = loadCast()
         async let similarMovies = loadSimilar()
 
-        let (availability, c, s) = await (providerAvailability, credits, similarMovies)
-        platforms = availability.providers
-        watchProvidersLink = availability.link
+        do {
+            let availability = try await TMDBService.shared.watchProviders(
+                id: movie.id,
+                mediaType: .movie,
+                region: regionCode
+            )
+            platforms = availability.providers
+            providerLoadError = nil
+        } catch {
+            platforms = []
+            providerLoadError = error.localizedDescription
+        }
+
+        let (c, s) = await (credits, similarMovies)
         cast = c
         similar = s
         isLoadingExtras = false
-    }
-
-    private func loadWatchProviders(region: String) async -> WatchProviderAvailability {
-        (try? await TMDBService.shared.watchProviders(
-            id: movie.id,
-            mediaType: .movie,
-            region: region
-        )) ?? .empty
     }
 
     private func loadCast() async -> [CastMember] {
@@ -374,20 +392,79 @@ struct MovieDetailView: View {
             .joined(separator: " • ")
     }
 
-    private func watchNowURL() -> URL {
-        if let watchProvidersLink {
-            return watchProvidersLink
-        }
-
-        let query = movie.title.addingPercentEncoding(
-            withAllowedCharacters: .urlQueryAllowed
-        ) ?? movie.title
-        return fallbackSearchURL(query: query)
+    private var regionCode: String {
+        settings.regionCode
     }
 
-    private func fallbackSearchURL(query: String) -> URL {
-        URL(string: "https://www.google.com/search?q=watch+\(query)")
-            ?? URL(string: "https://www.google.com")!
+    /// Keep Available On aligned with the exact provider context used by the
+    /// top selector. This removes unrelated channel/ad variants and reuses the
+    /// selector's canonical TMDB logo and display name.
+    private var displayedPlatforms: [WatchProvider] {
+        let contextualPlatforms = selectedProviderIDs.isEmpty
+            ? platforms
+            : platforms.filter { selectedProviderIDs.contains($0.id) }
+
+        return contextualPlatforms.map { provider in
+            settings.availableWatchProviders.first { $0.id == provider.id }
+                .map { canonical in
+                    WatchProvider(
+                        id: provider.id,
+                        name: canonical.name,
+                        logoPath: canonical.logoPath,
+                        displayPriority: provider.displayPriority,
+                        monetizationTypes: provider.monetizationTypes
+                    )
+                } ?? provider
+        }
+    }
+
+    private var contextualWatchProviders: [WatchProvider] {
+        let candidates = selectedProviderIDs.isEmpty
+            ? platforms
+            : platforms.filter { selectedProviderIDs.contains($0.id) }
+
+        return candidates.sorted { lhs, rhs in
+            let lhsStream = lhs.monetizationTypes.contains(.flatrate)
+            let rhsStream = rhs.monetizationTypes.contains(.flatrate)
+            if lhsStream != rhsStream { return lhsStream }
+            return lhs.displayPriority < rhs.displayPriority
+        }
+    }
+
+    private func openWatchDestination() {
+        if let providerLoadError {
+            watchMessage = providerLoadError
+            return
+        }
+
+        guard !contextualWatchProviders.isEmpty else {
+            watchMessage = L10n.string(
+                "This title is not currently available on a supported streaming platform in your region.",
+                languageCode: settings.languageCode
+            )
+            return
+        }
+
+        if contextualWatchProviders.count == 1,
+           let provider = contextualWatchProviders.first {
+            open(provider)
+        } else {
+            isShowingProviderPicker = true
+        }
+    }
+
+    private func open(_ provider: WatchProvider) {
+        guard let url = StreamingProviderLinkBuilder.searchURL(
+            for: provider,
+            title: movie.title
+        ) else {
+            watchMessage = L10n.string(
+                "Direct link is unavailable for this provider.",
+                languageCode: settings.languageCode
+            )
+            return
+        }
+        openURL(url)
     }
 
     private func trailerSearchURL() -> URL {

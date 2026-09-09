@@ -150,6 +150,7 @@ enum L10n {
     private static let fallbackValues = [
         "network_server_error_format": "Something went wrong (code %lld).",
         "on_platform_format": "On %@",
-        "search_no_results_format": "No results found for “%@”."
+        "search_no_results_format": "No results found for “%@”.",
+        "selected_platform_count_format": "%lld selected"
     ]
 }

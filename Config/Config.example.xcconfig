@@ -1,7 +1,7 @@
 // Copy this file to Local.xcconfig. Never commit Local.xcconfig.
 TMDB_API_KEY = your_tmdb_api_key
-PRIVACY_POLICY_URL = https:/$()/example.com/privacy
-TERMS_OF_SERVICE_URL = https:/$()/example.com/terms
+PRIVACY_POLICY_URL = https:/$()/sites.google.com/view/app-for-netflix/privacy-policy
+TERMS_OF_SERVICE_URL = https:/$()/sites.google.com/view/app-for-netflix/terms-of-use
 STOREKIT_WEEKLY_PRODUCT_ID = your.weekly.product.id
 STOREKIT_MONTHLY_PRODUCT_ID = your.monthly.product.id
 STOREKIT_ANNUAL_PRODUCT_ID = your.annual.product.id

@@ -1,7 +1,7 @@
 // Safe defaults. Local.xcconfig is intentionally ignored by Git.
 TMDB_API_KEY =
-PRIVACY_POLICY_URL =
-TERMS_OF_SERVICE_URL =
+PRIVACY_POLICY_URL = https:/$()/sites.google.com/view/app-for-netflix/privacy-policy
+TERMS_OF_SERVICE_URL = https:/$()/sites.google.com/view/app-for-netflix/terms-of-use
 STOREKIT_WEEKLY_PRODUCT_ID =
 STOREKIT_MONTHLY_PRODUCT_ID =
 STOREKIT_ANNUAL_PRODUCT_ID =
