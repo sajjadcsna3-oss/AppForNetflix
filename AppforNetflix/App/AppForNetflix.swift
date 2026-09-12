@@ -1,26 +1,17 @@
 import SwiftUI
 import SwiftData
-import FirebaseCore
 
 @main
 struct AppForNetflix: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var router = AppRouter()
     @StateObject private var settingsStore = SettingsStore()
-    @StateObject private var authStore: AuthStore
     @StateObject private var storeKit = StoreKitService()
-
-    init() {
-        FirebaseApp.configure()
-        _authStore = StateObject(wrappedValue: AuthStore())
-    }
-
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(router)
                 .environmentObject(settingsStore)
-                .environmentObject(authStore)
                 .environmentObject(storeKit)
                 .frame(minWidth: 900, minHeight: 600)
                 .preferredColorScheme(settingsStore.appearance.colorScheme)

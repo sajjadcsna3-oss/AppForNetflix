@@ -5,11 +5,11 @@ struct StreamingPlatformSelector: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var storeKit: StoreKitService
 
+    @StateObject private var viewModel = StreamingPlatformSelectorViewModel()
     @State private var isPresented = false
     @State private var searchText = ""
-    @State private var providers: [WatchProvider] = []
-    @State private var isLoading = false
-    @State private var errorMessage: String?
+
+    private var providers: [WatchProvider] { viewModel.providers }
 
     private var regionCode: String {
         settings.regionCode
@@ -145,11 +145,11 @@ struct StreamingPlatformSelector: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
             Group {
-                if isLoading {
+                if viewModel.isLoading {
                     ProgressView()
                         .controlSize(.small)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let errorMessage {
+                } else if let errorMessage = viewModel.errorMessage {
                     VStack(spacing: 10) {
                         Text(errorMessage)
                             .font(Theme.Font.caption(12))
@@ -297,36 +297,8 @@ struct StreamingPlatformSelector: View {
     }
 
     private func loadProviders() async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-
-        do {
-            async let regionalRequest = TMDBService.shared.movieWatchProviders(region: regionCode)
-            async let globalRequest = TMDBService.shared.movieWatchProviders()
-            let (regional, global) = try await (regionalRequest, globalRequest)
-            guard !Task.isCancelled else { return }
-            let regionalCandidates: [WatchProvider] = Platform.all.compactMap { definition in
-                guard let provider = regional.first(where: {
-                    definition.tmdbProviderIDs.contains($0.id)
-                }) ?? global.first(where: {
-                    definition.tmdbProviderIDs.contains($0.id)
-                }) else { return nil }
-                return WatchProvider(
-                    id: provider.id,
-                    name: definition.name,
-                    logoPath: provider.logoPath,
-                    displayPriority: provider.displayPriority,
-                    monetizationTypes: provider.monetizationTypes
-                )
-            }
-            providers = regionalCandidates
-            settings.updateAvailableWatchProviders(providers)
-        } catch {
-            guard !Task.isCancelled else { return }
-            providers = []
-            errorMessage = error.localizedDescription
-        }
+        await viewModel.load(region: regionCode)
+        settings.updateAvailableWatchProviders(viewModel.providers)
     }
 
 }

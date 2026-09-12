@@ -27,7 +27,7 @@ struct WatchProvider: Identifiable, Codable, Hashable {
 
     var logoURL: URL? {
         guard let logoPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w92\(logoPath)")
+        return AppConfiguration.tmdbProviderLogoBaseURL.appending(path: logoPath)
     }
 
     var availabilityLabel: String {

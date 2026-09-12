@@ -2,19 +2,14 @@ import Foundation
 import Combine
 
 struct HomeLoadContext: Equatable {
-    var section: SidebarSection
-    var genre: Genre?
-    var selectedProviderID: Int?
-    var connectedPlatformIDs: Set<Int>   // NEW: user's "Connected" platforms from Settings
-    var region: String
-    var rating: Double
-    var year: String
-    var language: String
-
-    static let initial = HomeLoadContext(
-        section: .home, genre: nil, selectedProviderID: nil, connectedPlatformIDs: [],
-        region: "US", rating: 0, year: "All Years", language: "en"
-    )
+    let section: SidebarSection
+    let genre: Genre?
+    let selectedProviderID: Int?
+    let connectedPlatformIDs: Set<Int>
+    let region: String
+    let rating: Double
+    let year: String
+    let language: String
 
     var needsGridLayout: Bool {
         genre != nil || selectedProviderID != nil || section != .home || rating > 0 || year != "All Years"
@@ -29,21 +24,21 @@ final class HomeViewModel: ObservableObject {
         case failed(String)
     }
     
-    @Published var featured: Movie?
-    @Published var continueWatching: [Movie] = []
-    @Published var trending: [Movie] = []
-    @Published var sectionResults: [Movie] = []
-    @Published var searchResults: [Movie] = []
-    @Published var isSearching = false
-    @Published var searchErrorMessage: String?
-    @Published var state: LoadState = .loading
+    @Published private(set) var featured: Movie?
+    @Published private(set) var continueWatching: [Movie] = []
+    @Published private(set) var trending: [Movie] = []
+    @Published private(set) var sectionResults: [Movie] = []
+    @Published private(set) var searchResults: [Movie] = []
+    @Published private(set) var isSearching = false
+    @Published private(set) var searchErrorMessage: String?
+    @Published private(set) var state: LoadState = .loading
     @Published var ratingFilter: Double = 0
     @Published var yearFilter: String = "All Years"
     
     private let service: TMDBService
     private let maxAutoPages = 10
     
-    init(service: TMDBService = .shared) {
+    init(service: TMDBService = TMDBService()) {
         self.service = service
     }
     

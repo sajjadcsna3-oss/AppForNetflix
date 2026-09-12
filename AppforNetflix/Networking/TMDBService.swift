@@ -1,22 +1,5 @@
 import Foundation
 
-enum NetworkError: LocalizedError {
-    case invalidResponse
-    case server(Int)
-    case decoding
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse:
-            return L10n.string("The server returned an unexpected response.")
-        case .server(let code):
-            return L10n.format("network_server_error_format", languageCode: nil, code)
-        case .decoding:
-            return L10n.string("Couldn't read the data we received.")
-        }
-    }
-}
-
 /// Thin wrapper around the TMDB REST API.
 ///
 /// Platform filtering is done through TMDB's watch-provider parameters:
@@ -26,25 +9,24 @@ enum NetworkError: LocalizedError {
 ///
 /// Genre, rating and year can be combined with a platform filter.
 actor TMDBService {
-    static let shared = TMDBService()
-
     private let apiKey: String
-    private let baseURL = URL(string: "https://api.themoviedb.org/3")!
+    private let baseURL: URL
     private let session: URLSession
 
-    private init(session: URLSession = .shared) {
-        self.apiKey = Secrets.tmdbAPIKey
+    init(
+        apiKey: String = AppConfiguration.tmdbAPIKey,
+        baseURL: URL = AppConfiguration.tmdbBaseURL,
+        session: URLSession = .shared
+    ) {
+        self.apiKey = apiKey
+        self.baseURL = baseURL
         self.session = session
     }
 
     struct Page {
         let movies: [Movie]
-        let currentPage: Int
         let totalPages: Int
 
-        var hasMore: Bool {
-            currentPage < totalPages
-        }
     }
 
     enum MediaType: String {
@@ -127,7 +109,6 @@ actor TMDBService {
         guard !trimmed.isEmpty else {
             return Page(
                 movies: [],
-                currentPage: 1,
                 totalPages: 1
             )
         }
@@ -388,12 +369,10 @@ actor TMDBService {
 
     private struct ListResponse: Codable {
         let results: [Movie]
-        let page: Int?
         let totalPages: Int?
 
         enum CodingKeys: String, CodingKey {
             case results
-            case page
             case totalPages = "total_pages"
         }
     }
@@ -439,7 +418,6 @@ actor TMDBService {
 
             return Page(
                 movies: decoded.results,
-                currentPage: decoded.page ?? page,
                 totalPages: max(decoded.totalPages ?? 1, 1)
             )
         } catch {

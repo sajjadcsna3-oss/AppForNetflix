@@ -1,18 +1,10 @@
 import SwiftUI
-import SwiftData
 
 struct SettingsView: View {
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var router: AppRouter
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var storeKit: StoreKitService
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
-
-    @State private var isEditingProfile = false
-    @State private var isShowingAuth = false
-    @State private var isShowingDeleteConfirmation = false
-    @State private var isShowingDeleteError = false
 
     private let languages = AppLanguage.supportedCodes
 
@@ -172,211 +164,11 @@ struct SettingsView: View {
                     .padding(16)
                 }
 
-                section("ACCOUNT") {
-                    if auth.isAuthenticated {
-                        HStack {
-                            Circle()
-                                .fill(Theme.accent)
-                                .frame(
-                                    width: 40,
-                                    height: 40
-                                )
-                                .overlay(
-                                    Text(
-                                        initials(
-                                            for: settings.userName
-                                        )
-                                    )
-                                    .font(
-                                        Theme.Font.caption(14)
-                                    )
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(.white)
-                                )
-
-                            VStack(
-                                alignment: .leading,
-                                spacing: 2
-                            ) {
-                                Text(settings.userName)
-                                    .font(
-                                        Theme.Font.body(15)
-                                    )
-                                    .fontWeight(.semibold)
-
-                                Text(settings.userEmail)
-                                    .font(
-                                        Theme.Font.caption(13)
-                                    )
-                                    .foregroundStyle(
-                                        Theme.textSecondary
-                                    )
-                            }
-
-                            Spacer()
-
-                            Button(L10n.string("Edit Profile", languageCode: settings.languageCode)) {
-                                isEditingProfile = true
-                            }
-                            .buttonStyle(.plain)
-                            .font(
-                                Theme.Font.caption(13)
-                            )
-                            .foregroundStyle(
-                                Theme.textSecondary
-                            )
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-
-                        rowDivider
-
-                        Button {
-                            auth.signOut()
-                            settings.userName = ""
-                            settings.userEmail = ""
-                        } label: {
-                            Text(L10n.string("Sign Out", languageCode: settings.languageCode))
-                                .font(
-                                    Theme.Font.body(14)
-                                )
-                                .foregroundStyle(
-                                    Theme.accent
-                                )
-                                .frame(
-                                    maxWidth: .infinity,
-                                    alignment: .leading
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-
-                        rowDivider
-
-                        Button {
-                            isShowingDeleteConfirmation = true
-                        } label: {
-                            Text(L10n.string("Delete Account", languageCode: settings.languageCode))
-                                .font(Theme.Font.body(14))
-                                .foregroundStyle(Theme.danger)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-
-                    } else {
-                        HStack {
-                            Circle()
-                                .fill(
-                                    Theme.surfaceElevated
-                                )
-                                .frame(
-                                    width: 40,
-                                    height: 40
-                                )
-                                .overlay(
-                                    Image(
-                                        systemName:
-                                            "person.fill"
-                                    )
-                                    .foregroundStyle(
-                                        Theme.textSecondary
-                                    )
-                                )
-
-                            VStack(
-                                alignment: .leading,
-                                spacing: 2
-                            ) {
-                                Text(L10n.string("Not signed in", languageCode: settings.languageCode))
-                                    .font(
-                                        Theme.Font.body(15)
-                                    )
-                                    .fontWeight(.semibold)
-
-                                Text(L10n.string(
-                                    "Sign in to sync your profile and premium status",
-                                    languageCode: settings.languageCode
-                                ))
-                                .font(
-                                    Theme.Font.caption(13)
-                                )
-                                .foregroundStyle(
-                                    Theme.textSecondary
-                                )
-                            }
-
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-
-                        rowDivider
-
-                        Button {
-                            isShowingAuth = true
-                        } label: {
-                            Text(L10n.string("Sign In", languageCode: settings.languageCode))
-                                .font(
-                                    Theme.Font.body(14)
-                                )
-                                .foregroundStyle(
-                                    Theme.accent
-                                )
-                                .frame(
-                                    maxWidth: .infinity,
-                                    alignment: .leading
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                    }
-                }
-
             }
             .padding(24)
         }
         .background(Theme.background)
         .foregroundStyle(Theme.textPrimary)
-        .sheet(
-            isPresented: $isEditingProfile
-        ) {
-            EditProfileView(auth: auth)
-        }
-        .sheet(
-            isPresented: $isShowingAuth
-        ) {
-            AuthView()
-        }
-        .alert(
-            L10n.string("Delete Account", languageCode: settings.languageCode),
-            isPresented: $isShowingDeleteConfirmation
-        ) {
-            Button(L10n.string("Delete", languageCode: settings.languageCode), role: .destructive) {
-                Task {
-                    let deleted = await auth.deleteAccount(settings: settings)
-                    if deleted {
-                        clearLocalAccountData()
-                    } else {
-                        isShowingDeleteError = true
-                    }
-                }
-            }
-            Button(L10n.string("Cancel", languageCode: settings.languageCode), role: .cancel) {}
-        } message: {
-            Text(L10n.string("This permanently deletes your account and associated account data. This action cannot be undone.", languageCode: settings.languageCode))
-        }
-        .alert(
-            L10n.string("Unable to Delete Account", languageCode: settings.languageCode),
-            isPresented: $isShowingDeleteError
-        ) {
-            Button(L10n.string("OK", languageCode: settings.languageCode), role: .cancel) {}
-        } message: {
-            Text(auth.lastErrorMessage ?? L10n.string("Something went wrong. Please try again.", languageCode: settings.languageCode))
-        }
     }
 
     private var appearanceSubtitle: String {
@@ -525,19 +317,6 @@ struct SettingsView: View {
         .opacity(isPremiumUser ? 0 : 1)
     }
 
-    private func premiumBinding<Value>(_ binding: Binding<Value>) -> Binding<Value> {
-        Binding(
-            get: { binding.wrappedValue },
-            set: { newValue in
-                if isPremiumUser {
-                    binding.wrappedValue = newValue
-                } else {
-                    router.showSubscription()
-                }
-            }
-        )
-    }
-
     private var videoQualityBinding: Binding<String> {
         Binding(
             get: { settings.videoQuality },
@@ -577,24 +356,6 @@ struct SettingsView: View {
         )
     }
 
-    private func initials(
-        for name: String
-    ) -> String {
-        name.split(separator: " ")
-            .compactMap {
-                $0.first
-            }
-            .map(String.init)
-            .joined()
-    }
-
-    private func clearLocalAccountData() {
-        let watchlist = (try? modelContext.fetch(FetchDescriptor<WatchlistItem>())) ?? []
-        let recent = (try? modelContext.fetch(FetchDescriptor<RecentlyViewedItem>())) ?? []
-        watchlist.forEach(modelContext.delete)
-        recent.forEach(modelContext.delete)
-        try? modelContext.save()
-    }
 }
 
 private struct SettingsDropdown<Item: Hashable>: View {
@@ -767,125 +528,5 @@ struct CustomRedSwitch: View {
             }
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct EditProfileView: View {
-    @ObservedObject var auth: AuthStore
-    @EnvironmentObject private var settings: SettingsStore
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var name = ""
-    @State private var email = ""
-    @State private var isShowingResult = false
-
-    var body: some View {
-        VStack(
-            alignment: .leading,
-            spacing: 16
-        ) {
-            Text(L10n.string("Edit Profile", languageCode: settings.languageCode))
-                .font(
-                    Theme.Font.heading()
-                )
-
-            VStack(
-                alignment: .leading,
-                spacing: 6
-            ) {
-                Text(L10n.string("Name", languageCode: settings.languageCode))
-                    .font(
-                        Theme.Font.caption()
-                    )
-                    .foregroundStyle(
-                        Theme.textSecondary
-                    )
-
-                TextField(
-                    L10n.string("Name", languageCode: settings.languageCode),
-                    text: $name
-                )
-                .textFieldStyle(
-                    .roundedBorder
-                )
-            }
-
-            VStack(
-                alignment: .leading,
-                spacing: 6
-            ) {
-                Text(L10n.string("Email", languageCode: settings.languageCode))
-                    .font(
-                        Theme.Font.caption()
-                    )
-                    .foregroundStyle(
-                        Theme.textSecondary
-                    )
-
-                TextField(
-                    L10n.string("Email", languageCode: settings.languageCode),
-                    text: $email
-                )
-                .textFieldStyle(
-                    .roundedBorder
-                )
-            }
-
-            HStack {
-                Spacer()
-
-                Button(
-                    L10n.string("Cancel", languageCode: settings.languageCode)
-                ) {
-                    dismiss()
-                }
-
-                Button(
-                    L10n.string("Save", languageCode: settings.languageCode)
-                ) {
-                    Task {
-                        if await auth.updateProfile(name: name, email: email, settings: settings) {
-                            isShowingResult = true
-                        }
-                    }
-                }
-                .buttonStyle(
-                    .borderedProminent
-                )
-                .tint(Theme.accent)
-                .disabled(auth.isProcessing)
-            }
-        }
-        .padding(24)
-        .frame(width: 360)
-        .background(
-            Theme.surface
-        )
-        .foregroundStyle(Theme.textPrimary)
-        .onAppear {
-            auth.lastErrorMessage = nil
-            auth.lastNoticeMessage = nil
-            name = settings.userName
-            email = settings.userEmail
-        }
-        .alert(
-            L10n.string("Profile", languageCode: settings.languageCode),
-            isPresented: $isShowingResult
-        ) {
-            Button(L10n.string("OK", languageCode: settings.languageCode), role: .cancel) {
-                auth.lastNoticeMessage = nil
-                dismiss()
-            }
-        } message: {
-            Text(auth.lastNoticeMessage ?? L10n.string("Profile updated.", languageCode: settings.languageCode))
-        }
-        .overlay(alignment: .bottomLeading) {
-            if let error = auth.lastErrorMessage {
-                Text(error)
-                    .font(Theme.Font.caption(12))
-                    .foregroundStyle(Theme.danger)
-                    .padding(24)
-            }
-        }
     }
 }

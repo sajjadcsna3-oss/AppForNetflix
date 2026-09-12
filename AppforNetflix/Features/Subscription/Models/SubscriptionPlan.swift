@@ -65,7 +65,18 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    // MARK: - Badge
+    var fallbackDisplayPrice: String {
+        switch self {
+        case .weekly:
+            return "$1.99"
+        case .monthly:
+            return "$5.99"
+        case .annual:
+            return "$25.99"
+        case .lifetime:
+            return "$49.99"
+        }
+    }
 
     var badge: String? {
         switch self {
@@ -83,7 +94,6 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    // MARK: - Description
 
     var detail: String {
         switch self {

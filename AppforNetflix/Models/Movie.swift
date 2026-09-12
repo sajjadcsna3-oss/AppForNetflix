@@ -31,12 +31,12 @@ struct Movie: Identifiable, Codable, Hashable {
 
     var posterURL: URL? {
         guard let posterPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
+        return AppConfiguration.tmdbPosterBaseURL.appending(path: posterPath)
     }
 
     var backdropURL: URL? {
         guard let backdropPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/original\(backdropPath)")
+        return AppConfiguration.tmdbBackdropBaseURL.appending(path: backdropPath)
     }
 
     enum CodingKeys: String, CodingKey {

@@ -8,7 +8,7 @@ struct CastMember: Identifiable, Codable, Hashable {
 
     var profileURL: URL? {
         guard let profilePath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w185\(profilePath)")
+        return AppConfiguration.tmdbProfileBaseURL.appending(path: profilePath)
     }
 
     enum CodingKeys: String, CodingKey {

@@ -12,17 +12,26 @@ struct MovieDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
+    @StateObject private var viewModel: MovieDetailViewModel
     @State private var isSaved = false
-    @State private var platforms: [WatchProvider] = []
-    @State private var cast: [CastMember] = []
-    @State private var similar: [Movie] = []
-    @State private var isLoadingExtras = true
     @State private var isShowingSubscription = false
     @State private var shouldAddToWatchlistAfterPurchase = false
     @State private var isShowingPurchaseSuccess = false
     @State private var isShowingProviderPicker = false
     @State private var watchMessage: String?
-    @State private var providerLoadError: String?
+
+    init(
+        movie: Movie,
+        selectedProviderIDs: Set<Int>,
+        watchlistViewModel: WatchlistViewModel,
+        recentViewModel: RecentViewModel
+    ) {
+        self.movie = movie
+        self.selectedProviderIDs = selectedProviderIDs
+        self.watchlistViewModel = watchlistViewModel
+        self.recentViewModel = recentViewModel
+        _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieID: movie.id))
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -116,7 +125,7 @@ struct MovieDetailView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                                 .buttonStyle(.plain)
-                                .disabled(isLoadingExtras)
+                                .disabled(viewModel.isLoading)
 
                                 Button {
                                     if !isPremiumUser {
@@ -181,9 +190,9 @@ struct MovieDetailView: View {
                     .padding(.horizontal, 40)
 
                     sectionContainer(title: L10n.string("AVAILABLE ON", languageCode: settings.languageCode)) {
-                        if isLoadingExtras && platforms.isEmpty {
+                        if viewModel.isLoading && viewModel.platforms.isEmpty {
                             ProgressView().controlSize(.small)
-                        } else if platforms.isEmpty {
+                        } else if viewModel.platforms.isEmpty {
                             // FIX: was a bare Text sitting flush against the
                             // section header with no container — looked
                             // unfinished. Now a small icon + text card,
@@ -222,9 +231,9 @@ struct MovieDetailView: View {
                         }
                     }
 
-                    if !cast.isEmpty {
+                    if !viewModel.cast.isEmpty {
                         sectionContainer(title: L10n.string("CAST", languageCode: settings.languageCode)) {
-                            HorizontalScrollWithArrows(items: Array(cast.prefix(15))) { member in
+                            HorizontalScrollWithArrows(items: Array(viewModel.cast.prefix(15))) { member in
                                 VStack(spacing: 8) {
                                     AsyncImage(url: member.profileURL) { phase in
                                         switch phase {
@@ -260,9 +269,9 @@ struct MovieDetailView: View {
                         }
                     }
 
-                    if !similar.isEmpty {
+                    if !viewModel.similarMovies.isEmpty {
                         sectionContainer(title: L10n.string("SIMILAR TITLES", languageCode: settings.languageCode)) {
-                            HorizontalScrollWithArrows(items: Array(similar.prefix(12))) { item in
+                            HorizontalScrollWithArrows(items: Array(viewModel.similarMovies.prefix(12))) { item in
                                 MovieCard(movie: item) {
                                     router.showDetails(for: item, providerIDs: selectedProviderIDs)
                                 }
@@ -303,7 +312,7 @@ struct MovieDetailView: View {
             }
         }
         .task(id: "\(settings.languageCode)|\(regionCode)") {
-            await loadExtras()
+            await viewModel.load(region: regionCode)
         }
         .sheet(isPresented: $isShowingSubscription, onDismiss: continueWatchlistAddition) {
             SubscriptionView {
@@ -351,38 +360,6 @@ struct MovieDetailView: View {
         storeKit.hasPremiumEntitlement
     }
 
-    private func loadExtras() async {
-        isLoadingExtras = true
-        async let credits = loadCast()
-        async let similarMovies = loadSimilar()
-
-        do {
-            let availability = try await TMDBService.shared.watchProviders(
-                id: movie.id,
-                mediaType: .movie,
-                region: regionCode
-            )
-            platforms = availability.providers
-            providerLoadError = nil
-        } catch {
-            platforms = []
-            providerLoadError = error.localizedDescription
-        }
-
-        let (c, s) = await (credits, similarMovies)
-        cast = c
-        similar = s
-        isLoadingExtras = false
-    }
-
-    private func loadCast() async -> [CastMember] {
-        (try? await TMDBService.shared.credits(movieId: movie.id)) ?? []
-    }
-
-    private func loadSimilar() async -> [Movie] {
-        (try? await TMDBService.shared.similar(movieId: movie.id)) ?? []
-    }
-
     private var genreLine: String {
         Genre.all
             .filter { movie.genreIDs.contains($0.id) }
@@ -401,8 +378,8 @@ struct MovieDetailView: View {
     /// selector's canonical TMDB logo and display name.
     private var displayedPlatforms: [WatchProvider] {
         let contextualPlatforms = selectedProviderIDs.isEmpty
-            ? platforms
-            : platforms.filter { selectedProviderIDs.contains($0.id) }
+            ? viewModel.platforms
+            : viewModel.platforms.filter { selectedProviderIDs.contains($0.id) }
 
         return contextualPlatforms.map { provider in
             settings.availableWatchProviders.first { $0.id == provider.id }
@@ -420,8 +397,8 @@ struct MovieDetailView: View {
 
     private var contextualWatchProviders: [WatchProvider] {
         let candidates = selectedProviderIDs.isEmpty
-            ? platforms
-            : platforms.filter { selectedProviderIDs.contains($0.id) }
+            ? viewModel.platforms
+            : viewModel.platforms.filter { selectedProviderIDs.contains($0.id) }
 
         return candidates.sorted { lhs, rhs in
             let lhsStream = lhs.monetizationTypes.contains(.flatrate)
@@ -432,8 +409,8 @@ struct MovieDetailView: View {
     }
 
     private func openWatchDestination() {
-        if let providerLoadError {
-            watchMessage = providerLoadError
+        if let providerErrorMessage = viewModel.providerErrorMessage {
+            watchMessage = providerErrorMessage
             return
         }
 

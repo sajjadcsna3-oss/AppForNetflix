@@ -1,19 +1,5 @@
 import SwiftUI
 
-enum AppColorScheme: String, CaseIterable, Identifiable {
-    case dark = "Dark"
-    case light = "Light"
-    case system = "System"
-    var id: String { rawValue }
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .dark: return .dark
-        case .light: return .light
-        case .system: return nil
-        }
-    }
-}
-
 enum Theme {
     static let accent = Color(hex: "E50914")
     static let accentPressed = Color(hex: "B0060F")

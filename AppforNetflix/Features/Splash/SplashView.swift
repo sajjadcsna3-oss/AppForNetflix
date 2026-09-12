@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SplashView: View {
     @State private var isAnimating = false
+
     var body: some View {
         ZStack {
             RadialGradient(
@@ -11,20 +12,22 @@ struct SplashView: View {
                 endRadius: 600
             )
             .ignoresSafeArea()
+
             VStack(spacing: 20) {
                 Image("AppLogo")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 120, height: 120)
-                    
                     .scaleEffect(isAnimating ? 1 : 0.85)
                     .opacity(isAnimating ? 1 : 0)
+
                 VStack(spacing: 8) {
                     Image("AppforNetflixlogo")
                         .frame(width: 272, height: 31, alignment: .center)
+
                     Image("AppText")
-                        
                         .foregroundStyle(Theme.textSecondary)
+
                     AppIcon.image("SplashlineIcon", fallbackSymbol: "minus")
                         .resizable()
                         .renderingMode(.original)
@@ -37,7 +40,9 @@ struct SplashView: View {
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) { isAnimating = true }
+            withAnimation(.easeOut(duration: 0.6)) {
+                isAnimating = true
+            }
         }
     }
 }

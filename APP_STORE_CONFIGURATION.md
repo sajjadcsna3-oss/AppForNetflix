@@ -41,13 +41,11 @@ does not contain a fake production URL.
 
 The privacy policy and App Store privacy answers should accurately describe:
 
-- Firebase Authentication, Firebase user ID, name, and email address
-- Account creation, password-reset email, profile updates, and deletion
 - TMDB metadata, images, and JustWatch-powered watch-provider availability
 - External streaming-provider, Google, and YouTube links
 - Local preferences, selected language, platform settings, watchlist, and recent history
 - Which information stays on-device and which is sent to service providers
-- Retention, account deletion, contact details, and user privacy rights
+- Retention, contact details, and user privacy rights
 
 ## Attribution and rights
 

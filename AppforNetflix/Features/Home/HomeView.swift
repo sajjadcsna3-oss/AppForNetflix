@@ -3,7 +3,6 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var settings: SettingsStore
-    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var storeKit: StoreKitService
     @Environment(\.modelContext) private var modelContext
     
@@ -16,7 +15,7 @@ struct HomeView: View {
     @State private var hasHandledInitialSubscriptionPresentation = false
     @State private var isShowingPurchaseSuccess = false
 
-    enum SeeAllList: Identifiable, Equatable {
+    private enum SeeAllList: Identifiable, Equatable {
         case continueWatching
         case trending
 
@@ -56,9 +55,6 @@ struct HomeView: View {
             watchlistViewModel.configure(context: modelContext)
             recentViewModel.configure(context: modelContext)
             presentInitialSubscriptionIfNeeded()
-        }
-        .onAppear {
-            auth.restoreSession(settings: settings)
         }
         .task(id: loadContext) {
             await viewModel.load(context: loadContext)

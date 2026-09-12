@@ -68,6 +68,7 @@ struct SidebarView: View {
             .foregroundStyle(isSelected ? .white : Theme.textSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .padding(.horizontal, 10)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -92,27 +93,28 @@ struct SidebarView: View {
             .background(isSelected ? Theme.surfaceElevated : .clear)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .padding(.horizontal, 10)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
     private var premiumCard: some View {
-        VStack(spacing: 4) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.white)
+        Button {
+            router.showSubscription()
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
 
-            Text(L10n.string("Discover across every\nplatform", languageCode: settings.languageCode))
-                .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(.white.opacity(0.7))
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
+                Text(L10n.string("Discover across every\nplatform", languageCode: settings.languageCode))
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
 
-            Spacer(minLength: 2)
+                Spacer(minLength: 2)
 
-            Button {
-                router.showSubscription()
-            } label: {
                 Text(L10n.string("Get Premium", languageCode: settings.languageCode))
                     .font(.system(size: 12, weight: .bold))
                     .frame(maxWidth: .infinity)
@@ -121,24 +123,25 @@ struct SidebarView: View {
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
-        }
-        .padding(12)
-        .frame(height: 130)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(hex: "E50914").opacity(0.15),
-                    Color(hex: "E50914").opacity(0.05)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+            .padding(12)
+            .frame(height: 130)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(hex: "E50914").opacity(0.15),
+                        Color(hex: "E50914").opacity(0.05)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: "E50914").opacity(0.3), lineWidth: 1)
-        )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(hex: "E50914").opacity(0.3), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 }

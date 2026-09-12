@@ -40,7 +40,7 @@ struct SubscriptionView: View {
         }
         .background(Color(hex: "151517"))
         .foregroundStyle(.white)
-        .frame(width: 920, height: 600)
+        .frame(width: 960, height: 650)
         .task {
             await prepareStoreKit()
         }
@@ -218,6 +218,12 @@ struct SubscriptionView: View {
                 }
             }
 
+            if !storeKit.isConfigured {
+                purchaseAvailabilityMessage("Purchases are not configured for this build.")
+            } else if let message = storeKit.lastErrorMessage {
+                purchaseAvailabilityMessage(message)
+            }
+
             Spacer()
 
             // MARK: Continue Button
@@ -252,6 +258,21 @@ struct SubscriptionView: View {
             }
             .buttonStyle(.plain)
             .disabled(storeKit.isLoading || selectedProduct == nil)
+
+            Button(
+                L10n.string(
+                    "Restore Purchases",
+                    languageCode: settings.languageCode
+                )
+            ) {
+                Task {
+                    await restorePurchases()
+                }
+            }
+            .buttonStyle(.plain)
+            .font(Theme.Font.caption(12))
+            .foregroundStyle(.white.opacity(0.7))
+            .disabled(storeKit.isLoading)
 
             // MARK: Terms & Privacy
 
@@ -541,6 +562,27 @@ struct SubscriptionView: View {
         } catch {
             showAlert(error.localizedDescription)
         }
+    }
+
+    private func restorePurchases() async {
+        do {
+            try await storeKit.restorePurchases()
+            settings.updatePremiumEntitlement(storeKit.hasPremiumEntitlement)
+            showAlert(
+                storeKit.hasPremiumEntitlement
+                    ? "Your purchases were restored."
+                    : "No previous purchases were found."
+            )
+        } catch {
+            showAlert("Purchases could not be restored. Please try again.")
+        }
+    }
+
+    private func purchaseAvailabilityMessage(_ message: String) -> some View {
+        Text(L10n.string(message, languageCode: settings.languageCode))
+            .font(Theme.Font.caption(12))
+            .foregroundStyle(.white.opacity(0.65))
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - URL

@@ -62,19 +62,9 @@ struct MovieCard: View {
             }
             .frame(width: 150, height: 225)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius))
-            .overlay {
-                // inset(by:) laga diya taaki stroke bounding box ke bahar kabhi na jaye
-                // (default center-stroke lineWidth ka aadha hissa bahar draw hota tha
-                // jo ScrollView clipping / neighbouring card ke peeche cut ho jata tha)
-                RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius)
-                    .strokeBorder(isHovering ? Theme.accent : Color.clear, lineWidth: 2)
-            }
-            .scaleEffect(isHovering ? 1.02 : 1.0)
-            .animation(.easeOut(duration: 0.15), value: isHovering)
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius))
+            .hoverCardStyle(isHovering: $isHovering)
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
     }
 }
 
@@ -116,16 +106,9 @@ struct LandscapeMovieCard: View {
             }
             .frame(width: 240, height: 135)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius)
-                    .strokeBorder(isHovering ? Theme.accent : Color.clear, lineWidth: 2)
-            }
-            .scaleEffect(isHovering ? 1.02 : 1.0)
-            .animation(.easeOut(duration: 0.15), value: isHovering)
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius))
+            .hoverCardStyle(isHovering: $isHovering)
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
     }
 }
 
