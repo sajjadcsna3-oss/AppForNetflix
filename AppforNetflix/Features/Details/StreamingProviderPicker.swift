@@ -13,6 +13,7 @@ struct StreamingProviderPicker: View {
                 Text(L10n.string("Choose where to watch", languageCode: settings.languageCode))
                     .font(Theme.Font.title(22))
                     .fontWeight(.bold)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
 
@@ -35,7 +36,15 @@ struct StreamingProviderPicker: View {
             }
         }
         .padding(22)
-        .frame(width: 440, height: 520)
+        // FIX (Guideline 4 – "Windows cut off text"): a hardcoded
+        // 440x520 sheet had no room to grow for longer localized section
+        // titles/provider names, and no room to shrink on a smaller
+        // display without clipping. A min/ideal/max range lets AppKit size
+        // the sheet to fit its actual content on every window size.
+        .frame(
+            minWidth: 360, idealWidth: 440, maxWidth: 560,
+            minHeight: 420, idealHeight: 520, maxHeight: 720
+        )
         .background(Theme.surface)
         .foregroundStyle(Theme.textPrimary)
     }
@@ -73,6 +82,7 @@ struct StreamingProviderPicker: View {
                             Text(provider.name)
                                 .font(Theme.Font.body(14))
                                 .fontWeight(.medium)
+                                .lineLimit(2)
 
                             Spacer()
 

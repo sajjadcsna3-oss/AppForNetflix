@@ -1,12 +1,8 @@
 import SwiftUI
-#if canImport(AppKit)
 import AppKit
-#endif
 
 struct TopBar: View {
     @EnvironmentObject private var settings: SettingsStore
-    @EnvironmentObject private var router: AppRouter
-    @EnvironmentObject private var storeKit: StoreKitService
     @Binding var searchText: String
     @ObservedObject var viewModel: HomeViewModel
 
@@ -21,87 +17,102 @@ struct TopBar: View {
     }
 
     var body: some View {
+        // FIX (Guideline 4 – "Windows cut off text"): at the app's minimum
+        // window width, cramming search + platform selector + 3 filter
+        // dropdowns into one row left too little space for the dropdown
+        // labels, so SwiftUI silently truncated them ("All Ratings" →
+        // "All...", "United States" → "U..."). ViewThatFits now falls back
+        // to a two-row layout (search on top, filters below) before that
+        // ever has to happen, so every label always renders in full.
+        ViewThatFits(in: .horizontal) {
+            wideLayout
+            narrowLayout
+        }
+    }
+
+    // MARK: - Layouts
+
+    private var wideLayout: some View {
         HStack(spacing: 16) {
-
-            // MARK: - Search
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Theme.textTertiary)
-
-                TextField(
-                    L10n.string("Search…", languageCode: settings.languageCode),
-                    text: $searchText
-                )
-                .textFieldStyle(.plain)
-                .foregroundStyle(Theme.textPrimary)
-                .focused($isSearchFocused)
-                .allowsHitTesting(isPremiumUser)
-
-                if !isPremiumUser {
-                    Button {
-                        router.showSubscription()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "lock.fill")
-                            Text("PRO")
-                        }
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Theme.textTertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Text("⌘K")
-                    .font(Theme.Font.caption(11))
-                    .foregroundStyle(Theme.textTertiary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.white.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-            )
-            .frame(maxWidth: 340)
-            .background {
-                Button("") {
-                    if isPremiumUser {
-                        isSearchFocused = true
-                    } else {
-                        router.showSubscription()
-                    }
-                }
-                    .keyboardShortcut("k", modifiers: .command)
-                    .frame(width: 0, height: 0)
-                    .opacity(0)
-            }
-
+            searchField
             Spacer()
+            filtersRow
+        }
+    }
 
+    private var narrowLayout: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            searchField
+                .frame(maxWidth: .infinity, alignment: .leading)
+            filtersRow
+        }
+    }
+
+    // MARK: - Search
+
+    private var searchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(Theme.textTertiary)
+
+            TextField(
+                L10n.string("Search…", languageCode: settings.languageCode),
+                text: $searchText
+            )
+            .textFieldStyle(.plain)
+            .foregroundStyle(Theme.textPrimary)
+            .focused($isSearchFocused)
+
+            Text("⌘K")
+                .font(Theme.Font.caption(11))
+                .foregroundStyle(Theme.textTertiary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        // FIX: a floor of 200pt keeps the field usable in the narrow
+        // (stacked) layout instead of letting it get squeezed to near zero.
+        .frame(minWidth: 200, maxWidth: 340)
+        .background {
+            Button("") {
+                isSearchFocused = true
+            }
+                .keyboardShortcut("k", modifiers: .command)
+                .frame(width: 0, height: 0)
+                .opacity(0)
+        }
+    }
+
+    // MARK: - Filters row
+
+    private var filtersRow: some View {
+        HStack(spacing: 12) {
             // MARK: - Streaming Platforms
             // Same selection/state as the existing top bar.
             // Only the visual presentation has been changed.
             StreamingPlatformSelector()
 
-            HStack(spacing: 12) {
-                ratingDropdown
-                    .zIndex(3)
+            ratingDropdown
+                .zIndex(3)
 
-                yearDropdown
-                    .zIndex(2)
+            yearDropdown
+                .zIndex(2)
 
-                countryDropdown
-                    .zIndex(1)
-            }
+            countryDropdown
+                .zIndex(1)
         }
     }
 
@@ -222,9 +233,6 @@ struct TopBar: View {
         }
     }
 
-    private var isPremiumUser: Bool {
-        storeKit.hasPremiumEntitlement
-    }
 }
 
 // MARK: - Filter Dropdown

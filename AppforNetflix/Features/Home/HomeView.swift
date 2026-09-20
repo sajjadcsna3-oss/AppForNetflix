@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
@@ -9,6 +10,7 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var watchlistViewModel = WatchlistViewModel()
     @StateObject private var recentViewModel = RecentViewModel()
+    @StateObject private var libraryViewModel = LibraryViewModel()
     
     @State private var searchText = ""
     @State private var seeAllList: SeeAllList?
@@ -38,7 +40,10 @@ struct HomeView: View {
             Group {
                 switch router.selectedSection {
                 case .watchlist:
-                    WatchlistView(viewModel: watchlistViewModel)
+                    MyLibraryView(
+                        watchlistViewModel: watchlistViewModel,
+                        libraryViewModel: libraryViewModel
+                    )
                 case .recent:
                     RecentView(viewModel: recentViewModel)
                 case .settings:
@@ -54,6 +59,7 @@ struct HomeView: View {
         .task {
             watchlistViewModel.configure(context: modelContext)
             recentViewModel.configure(context: modelContext)
+            libraryViewModel.configure(context: modelContext)
             presentInitialSubscriptionIfNeeded()
         }
         .task(id: loadContext) {
@@ -61,18 +67,15 @@ struct HomeView: View {
         }
         .task(id: "\(searchText)|\(settings.languageCode)") {
             try? await Task.sleep(for: .milliseconds(300))
-            if isPremiumUser {
-                await viewModel.search(searchText, region: regionCode)
-            } else {
-                await viewModel.search("", region: regionCode)
-            }
+            await viewModel.search(searchText, region: regionCode)
         }
         .sheet(item: $router.presentedMovie) { movie in
             MovieDetailView(
                 movie: movie,
                 selectedProviderIDs: router.presentedProviderIDs,
                 watchlistViewModel: watchlistViewModel,
-                recentViewModel: recentViewModel
+                recentViewModel: recentViewModel,
+                libraryViewModel: libraryViewModel
             )
         }
         .sheet(isPresented: $router.isShowingSubscription, onDismiss: continuePendingPremiumDestination) {
@@ -102,11 +105,6 @@ struct HomeView: View {
         .onChange(of: storeKit.entitlementState) {
             presentInitialSubscriptionIfNeeded()
 
-            guard storeKit.entitlementState == .notEntitled else { return }
-            searchText = ""
-            if router.selectedSection == .watchlist || router.selectedSection == .recent {
-                router.select(.home)
-            }
         }
     }
 
@@ -232,18 +230,12 @@ struct HomeView: View {
                         movie: featured,
                         onWatch: { showDetails(for: featured) },
                         onToggleWatchlist: {
-                            if !isPremiumUser {
-                                router.showSubscription(then: .addToWatchlist(featured))
-                            } else {
-                                watchlistViewModel.toggle(featured)
-                            }
+                            watchlistViewModel.toggle(featured)
                         },
                         onInfo: {
                             showDetails(for: featured)
                         },
-                        isSaved: isPremiumUser
-                            && watchlistViewModel.isSaved(featured),
-                        isWatchlistLocked: !isPremiumUser
+                        isSaved: watchlistViewModel.isSaved(featured)
                     )
                     .padding(.horizontal, 24)
                 }
@@ -330,9 +322,6 @@ struct HomeView: View {
               storeKit.entitlementState != .loading else { return }
 
         hasHandledInitialSubscriptionPresentation = true
-        if storeKit.entitlementState == .notEntitled {
-            router.showSubscription()
-        }
     }
 
     private func seeAllHeader(_ list: SeeAllList) -> some View {

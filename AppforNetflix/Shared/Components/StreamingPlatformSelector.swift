@@ -73,6 +73,7 @@ struct StreamingPlatformSelector: View {
             HStack {
                 Text(L10n.string("Choose your platforms", languageCode: settings.languageCode))
                     .font(Theme.Font.title(20))
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
 
@@ -94,6 +95,7 @@ struct StreamingPlatformSelector: View {
                 Text(selectedCountText)
                     .font(Theme.Font.body(13))
                     .fontWeight(.semibold)
+                    .lineLimit(1)
 
                 Spacer()
 
@@ -155,6 +157,7 @@ struct StreamingPlatformSelector: View {
                             .font(Theme.Font.caption(12))
                             .foregroundStyle(Theme.textSecondary)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         Button(L10n.string("Try Again", languageCode: settings.languageCode)) {
                             Task { await loadProviders() }
@@ -173,10 +176,17 @@ struct StreamingPlatformSelector: View {
                     }
                 }
             }
-            .frame(height: 310)
+            // FIX (Guideline 4): a fixed 310pt list area truncated the
+            // provider list (and clipped the error/empty states) once more
+            // than a handful of providers loaded for a region. A min/ideal/
+            // max range lets this grow to fit real TMDB data per-region.
+            .frame(minHeight: 240, idealHeight: 310, maxHeight: 460)
         }
         .padding(18)
-        .frame(width: 440)
+        // FIX (Guideline 4): same issue as above — a fixed 440pt panel
+        // width couldn't accommodate longer localized labels ("Deselect
+        // All" translations, provider names) without clipping.
+        .frame(minWidth: 360, idealWidth: 440, maxWidth: 560)
         .background(Theme.surface)
         .foregroundStyle(Theme.textPrimary)
     }

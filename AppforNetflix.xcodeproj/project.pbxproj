@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9AA30BFD305BF609007BA587 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA30BFC305BF609007BA587 /* StoreKit.framework */; };
 		9AE41584304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9AE41583304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9AA30BFC305BF609007BA587 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		9AE4128D304C0B5500204B64 /* AppforNetflix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppforNetflix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AE41583304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf"; sourceTree = SOURCE_ROOT; };
 		A1000001304C0CC500204B64 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
@@ -43,6 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9AA30BFD305BF609007BA587 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +74,7 @@
 		9AE4157C304C0CC500204B64 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9AA30BFC305BF609007BA587 /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -343,6 +347,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;

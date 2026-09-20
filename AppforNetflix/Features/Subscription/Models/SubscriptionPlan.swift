@@ -70,9 +70,9 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
         case .weekly:
             return "$1.99"
         case .monthly:
-            return "$5.99"
+            return "$4.99"
         case .annual:
-            return "$25.99"
+            return "$24.99"
         case .lifetime:
             return "$49.99"
         }
@@ -84,7 +84,7 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
             return "STARTER"
 
         case .monthly:
-            return "FREE TRIAL"
+            return "3-DAY FREE TRIAL"
 
         case .annual:
             return "BEST VALUE"

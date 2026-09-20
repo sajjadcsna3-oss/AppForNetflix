@@ -28,39 +28,43 @@ struct SidebarView: View {
                         genreRow(genre)
                     }
                 }
+                // FIX (Guideline 4 – content must stay reachable at any
+                // window size): without this, the last genre row could sit
+                // flush against the bottom of the scroll area right where
+                // the pinned "Get Premium" card begins, on shorter windows.
+                .padding(.bottom, 12)
             }
+            // FIX: makes the scroll area reliably claim all height the
+            // sidebar is given, at every window size, rather than relying
+            // on the surrounding HStack to imply it. The premium card below
+            // stays outside the ScrollView so it's always pinned in view.
+            .frame(maxHeight: .infinity)
 
             if !isPremiumUser {
                 premiumCard
                     .padding(12)
             }
         }
-        .frame(width: Theme.Metrics.sidebarWidth)
+        .frame(minWidth: 220, idealWidth: Theme.Metrics.sidebarWidth, maxWidth: 280)
+        .frame(maxHeight: .infinity)
         .background(Theme.surface)
     }
 
     private func sidebarRow(_ section: SidebarSection) -> some View {
         let isSelected = router.selectedSection == section && router.selectedGenre == nil
-        let isPremiumSection = section == .watchlist || section == .recent
-        let isLocked = !isPremiumUser && isPremiumSection
         return Button {
-            if isLocked {
-                router.showSubscription(then: .section(section))
-            } else {
-                router.select(section)
-            }
+            router.select(section)
         } label: {
             HStack(spacing: 10) {
                 AppIconView(assetName: section.assetName, fallbackSymbol: section.fallbackSymbol)
                     .frame(width: 16, height: 16)
-                Text(L10n.string(section.rawValue, languageCode: settings.languageCode))
+                Text(L10n.string(
+                    section == .watchlist ? "My Library" : section.rawValue,
+                    languageCode: settings.languageCode
+                ))
                     .font(Theme.Font.body())
+                    .lineLimit(1)
                 Spacer()
-                if isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Theme.textTertiary)
-                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
@@ -85,6 +89,7 @@ struct SidebarView: View {
                     .frame(width: 15, height: 15)
                 Text(L10n.string(genre.name, languageCode: settings.languageCode))
                     .font(Theme.Font.body(13))
+                    .lineLimit(1)
                 Spacer()
             }
             .padding(.horizontal, 16)

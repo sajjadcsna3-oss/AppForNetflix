@@ -205,33 +205,20 @@ final class HomeViewModel: ObservableObject {
             isSearching = false
             return
         }
-        isSearching = true
         searchErrorMessage = nil
-        defer { isSearching = false }
-        do {
-            let first = try await service.search(query: trimmedQuery, region: region, page: 1)
-            let lastPage = min(first.totalPages, maxAutoPages)
-            guard lastPage > 1 else {
-                searchResults = first.movies
-                return
-            }
-            var pagesByNumber: [Int: [Movie]] = [1: first.movies]
-            try await withThrowingTaskGroup(of: (Int, [Movie]).self) { group in
-                for page in 2...lastPage {
-                    group.addTask {
-                        let result = try await self.service.search(query: trimmedQuery, region: region, page: page)
-                        return (page, result.movies)
-                    }
-                }
-                for try await (page, movies) in group {
-                    pagesByNumber[page] = movies
-                }
-            }
-            searchResults = (1...lastPage).flatMap { pagesByNumber[$0] ?? [] }
-        } catch {
-            searchResults = []
-            guard !Task.isCancelled else { return }
-            searchErrorMessage = error.localizedDescription
+        isSearching = false
+
+        var seen = Set<Int>()
+        let cachedCatalog = [featured].compactMap { $0 }
+            + continueWatching
+            + trending
+            + sectionResults
+        searchResults = cachedCatalog.filter { movie in
+            seen.insert(movie.id).inserted
+                && movie.title.range(
+                    of: trimmedQuery,
+                    options: [.caseInsensitive, .diacriticInsensitive]
+                ) != nil
         }
     }
     

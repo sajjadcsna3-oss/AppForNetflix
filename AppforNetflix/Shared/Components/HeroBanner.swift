@@ -7,7 +7,6 @@ struct HeroBanner: View {
     var onToggleWatchlist: () -> Void
     var onInfo: () -> Void = {}
     var isSaved: Bool
-    var isWatchlistLocked: Bool = false
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -61,6 +60,7 @@ struct HeroBanner: View {
                 Text(movie.title)
                     .font(Theme.Font.title(40))
                     .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(movie.overview)
                     .font(Theme.Font.body())
@@ -68,7 +68,20 @@ struct HeroBanner: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 620, alignment: .leading)
 
-                HStack(spacing: 12) {
+                ViewThatFits(in: .horizontal) {
+                    actionButtons
+                    actionButtons
+                        .labelStyle(.iconOnly)
+                }
+            }
+            .padding(28)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(height: 460)
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
                     Button(action: onWatch) {
                         Label(L10n.string("Watch Now", languageCode: settings.languageCode), systemImage: "play.fill")
                             .font(Theme.Font.body(14)).fontWeight(.semibold)
@@ -83,12 +96,8 @@ struct HeroBanner: View {
                         HStack(spacing: 6) {
                             Label(
                                 L10n.string(isSaved ? "In My List" : "My List", languageCode: settings.languageCode),
-                                systemImage: isWatchlistLocked ? "lock.fill" : (isSaved ? "checkmark" : "plus")
+                                systemImage: isSaved ? "checkmark" : "plus"
                             )
-                            if isWatchlistLocked {
-                                Text("PRO")
-                                    .font(.system(size: 9, weight: .bold))
-                            }
                         }
                             .font(Theme.Font.body(14)).fontWeight(.semibold)
                             .padding(.horizontal, 20).padding(.vertical, 11)
@@ -107,12 +116,7 @@ struct HeroBanner: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
-                }
-            }
-            .padding(28)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: 460)
     }
 
     private func compactProviderBadge(_ platform: WatchProvider) -> some View {

@@ -8,24 +8,6 @@ struct SettingsView: View {
 
     private let languages = AppLanguage.supportedCodes
 
-    private let videoQualities = [
-        "Auto (4K)",
-        "4K",
-        "1080p",
-        "720p",
-        "480p",
-        "Data Saver"
-    ]
-
-    private let subtitleOptions = [
-        "Off",
-        "English",
-        "Arabic",
-        "Urdu",
-        "French",
-        "Spanish"
-    ]
-
     var body: some View {
         ScrollView {
             VStack(
@@ -77,46 +59,6 @@ struct SettingsView: View {
                                 "\(Country.find(name).flag) \(L10n.string(name, languageCode: settings.languageCode))"
                             },
                             selection: $settings.region
-                        )
-                    }
-                }
-
-                section("PLAYBACK") {
-                    settingsRow(
-                        title: "Video Quality",
-                        subtitle: L10n.string("Preferred quality for playback handled by this app", languageCode: settings.languageCode)
-                    ) {
-                        premiumIndicator
-                        SettingsDropdown(
-                            items: videoQualities,
-                            label: {
-                                L10n.string($0, languageCode: settings.languageCode)
-                            },
-                            selection: videoQualityBinding
-                        )
-                    }
-
-                    rowDivider
-
-                    settingsRow(
-                        title: "Autoplay",
-                        subtitle: L10n.string("Play the next item automatically when supported in this app", languageCode: settings.languageCode)
-                    ) {
-                        CustomRedSwitch(isOn: $settings.autoplayNext)
-                    }
-
-                    rowDivider
-
-                    settingsRow(
-                        title: "Subtitles",
-                        subtitle: L10n.string("Preferred subtitles for playback handled by this app", languageCode: settings.languageCode)
-                    ) {
-                        SettingsDropdown(
-                            items: subtitleOptions,
-                            label: {
-                                L10n.string($0, languageCode: settings.languageCode)
-                            },
-                            selection: $settings.subtitles
                         )
                     }
                 }
@@ -242,34 +184,47 @@ struct SettingsView: View {
         subtitle: String?,
         @ViewBuilder trailing: () -> Content
     ) -> some View {
-        HStack {
+        ViewThatFits(in: .horizontal) {
+            settingsRowHorizontal(title: title, subtitle: subtitle, trailing: trailing)
+
             VStack(
                 alignment: .leading,
-                spacing: 4
+                spacing: 12
             ) {
-                Text(L10n.string(title, languageCode: settings.languageCode))
-                .font(
-                    Theme.Font.body(15)
-                )
-                .fontWeight(.medium)
-
-                if let subtitle {
-                    Text(subtitle)
-                        .font(
-                            Theme.Font.caption(13)
-                        )
-                        .foregroundStyle(
-                            Theme.textSecondary
-                        )
-                }
+                settingsRowLabel(title: title, subtitle: subtitle)
+                trailing()
             }
-
-            Spacer()
-
-            trailing()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    private func settingsRowHorizontal<Content: View>(
+        title: String,
+        subtitle: String?,
+        @ViewBuilder trailing: () -> Content
+    ) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            settingsRowLabel(title: title, subtitle: subtitle)
+            Spacer()
+            trailing()
+        }
+    }
+
+    private func settingsRowLabel(title: String, subtitle: String?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L10n.string(title, languageCode: settings.languageCode))
+                .font(Theme.Font.body(15))
+                .fontWeight(.medium)
+
+            if let subtitle {
+                Text(subtitle)
+                    .font(Theme.Font.caption(13))
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
     private func platformRow(
@@ -305,30 +260,6 @@ struct SettingsView: View {
 
     private var isPremiumUser: Bool {
         storeKit.hasPremiumEntitlement
-    }
-
-    private var premiumIndicator: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "lock.fill")
-            Text("PRO")
-        }
-        .font(.system(size: 9, weight: .bold))
-        .foregroundStyle(Theme.textTertiary)
-        .opacity(isPremiumUser ? 0 : 1)
-    }
-
-    private var videoQualityBinding: Binding<String> {
-        Binding(
-            get: { settings.videoQuality },
-            set: { quality in
-                let isPremiumQuality = quality == "Auto (4K)" || quality == "4K"
-                if isPremiumQuality && !isPremiumUser {
-                    router.showSubscription()
-                } else {
-                    settings.videoQuality = quality
-                }
-            }
-        )
     }
 
     @ViewBuilder

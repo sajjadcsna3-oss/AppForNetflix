@@ -13,7 +13,8 @@ struct AppForNetflix: App {
                 .environmentObject(router)
                 .environmentObject(settingsStore)
                 .environmentObject(storeKit)
-                .frame(minWidth: 900, minHeight: 600)
+               
+                .frame(minWidth: 1200, minHeight: 800)
                 .preferredColorScheme(settingsStore.appearance.colorScheme)
                 .environment(\.locale, Locale(identifier: settingsStore.languageCode))
                 .environment(
@@ -29,11 +30,13 @@ struct AppForNetflix: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }
-                    Task { await storeKit.refreshEntitlements() }
+                    Task { await storeKit.refreshEntitlements()
+                    }
                 }
         }
-        .modelContainer(for: [WatchlistItem.self, RecentlyViewedItem.self])
-        .windowResizability(.contentSize)
+        .modelContainer(for: [WatchlistItem.self, RecentlyViewedItem.self, LibraryItem.self])
+     
+        .windowResizability(.contentMinSize)
     }
 }
 
