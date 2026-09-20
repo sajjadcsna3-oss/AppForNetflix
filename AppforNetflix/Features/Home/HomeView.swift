@@ -1,19 +1,23 @@
 import SwiftUI
+import SwiftData
 
 struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var settings: SettingsStore
-    @EnvironmentObject private var auth: AuthStore
+    @EnvironmentObject private var storeKit: StoreKitService
     @Environment(\.modelContext) private var modelContext
     
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var watchlistViewModel = WatchlistViewModel()
     @StateObject private var recentViewModel = RecentViewModel()
+    @StateObject private var libraryViewModel = LibraryViewModel()
     
     @State private var searchText = ""
     @State private var seeAllList: SeeAllList?
+    @State private var hasHandledInitialSubscriptionPresentation = false
+    @State private var isShowingPurchaseSuccess = false
 
-    enum SeeAllList: Identifiable, Equatable {
+    private enum SeeAllList: Identifiable, Equatable {
         case continueWatching
         case trending
 
@@ -36,7 +40,10 @@ struct HomeView: View {
             Group {
                 switch router.selectedSection {
                 case .watchlist:
-                    WatchlistView(viewModel: watchlistViewModel)
+                    MyLibraryView(
+                        watchlistViewModel: watchlistViewModel,
+                        libraryViewModel: libraryViewModel
+                    )
                 case .recent:
                     RecentView(viewModel: recentViewModel)
                 case .settings:
@@ -52,9 +59,8 @@ struct HomeView: View {
         .task {
             watchlistViewModel.configure(context: modelContext)
             recentViewModel.configure(context: modelContext)
-        }
-        .onAppear {
-            auth.restoreSession(settings: settings)
+            libraryViewModel.configure(context: modelContext)
+            presentInitialSubscriptionIfNeeded()
         }
         .task(id: loadContext) {
             await viewModel.load(context: loadContext)
@@ -66,12 +72,24 @@ struct HomeView: View {
         .sheet(item: $router.presentedMovie) { movie in
             MovieDetailView(
                 movie: movie,
+                selectedProviderIDs: router.presentedProviderIDs,
                 watchlistViewModel: watchlistViewModel,
-                recentViewModel: recentViewModel
+                recentViewModel: recentViewModel,
+                libraryViewModel: libraryViewModel
             )
         }
-        .sheet(isPresented: $router.isShowingSubscription) {
-            SubscriptionView()
+        .sheet(isPresented: $router.isShowingSubscription, onDismiss: continuePendingPremiumDestination) {
+            SubscriptionView {
+                isShowingPurchaseSuccess = true
+            }
+        }
+        .alert(
+            L10n.string("Purchase Information", languageCode: settings.languageCode),
+            isPresented: $isShowingPurchaseSuccess
+        ) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(L10n.string("Your purchase was successful.", languageCode: settings.languageCode))
         }
         .onChange(of: router.selectedSection) {
             seeAllList = nil
@@ -84,10 +102,14 @@ struct HomeView: View {
                 seeAllList = nil
             }
         }
+        .onChange(of: storeKit.entitlementState) {
+            presentInitialSubscriptionIfNeeded()
+
+        }
     }
 
     private var regionCode: String {
-        Country.find(settings.region).code
+        settings.regionCode
     }
 
     // FIX: Settings "Connected" platforms are only a preference.
@@ -96,8 +118,8 @@ struct HomeView: View {
         HomeLoadContext(
             section: router.selectedSection,
             genre: router.selectedGenre,
-            platform: settings.selectedPlatform,
-            connectedPlatformIDs: settings.connectedPlatformIDs,
+            selectedProviderID: activeSelectedProviderID,
+            connectedPlatformIDs: settings.effectiveConnectedPlatformIDs(isPremium: isPremiumUser),
             region: regionCode,
             rating: viewModel.ratingFilter,
             year: viewModel.yearFilter,
@@ -130,8 +152,8 @@ struct HomeView: View {
 
                     if searchText.isEmpty && !isPlainHome {
                         PlatformFilterBar(
-                            platforms: Platform.filterBar,
-                            selected: $settings.selectedPlatform
+                            providers: settings.availableWatchProviders,
+                            selectedProviderID: $settings.selectedProviderID
                         )
                         .padding(.horizontal, 24)
                         .padding(.bottom, 20)
@@ -176,10 +198,10 @@ struct HomeView: View {
     }
 
     private var homeFilterTitle: String {
-        if let platform = settings.selectedPlatform {
+        if let provider = selectedQuickFilterProvider {
             return String(
                 format: L10n.string("on_platform_format", languageCode: settings.languageCode),
-                platform.name
+                provider.name
             )
         }
 
@@ -206,12 +228,12 @@ struct HomeView: View {
                 if let featured = viewModel.featured {
                     HeroBanner(
                         movie: featured,
-                        onWatch: { router.showDetails(for: featured) },
+                        onWatch: { showDetails(for: featured) },
                         onToggleWatchlist: {
                             watchlistViewModel.toggle(featured)
                         },
                         onInfo: {
-                            router.showDetails(for: featured)
+                            showDetails(for: featured)
                         },
                         isSaved: watchlistViewModel.isSaved(featured)
                     )
@@ -219,8 +241,8 @@ struct HomeView: View {
                 }
 
                 PlatformFilterBar(
-                    platforms: Platform.filterBar,
-                    selected: $settings.selectedPlatform
+                    providers: settings.availableWatchProviders,
+                    selectedProviderID: $settings.selectedProviderID
                 )
                 .padding(.horizontal, 24)
 
@@ -229,7 +251,7 @@ struct HomeView: View {
                     movies: viewModel.continueWatching,
                     isLandscape: true,
                     onSelect: {
-                        router.showDetails(for: $0)
+                        showDetails(for: $0)
                     },
                     onSeeAll: {
                         seeAllList = .continueWatching
@@ -242,7 +264,7 @@ struct HomeView: View {
                     movies: viewModel.trending,
                     isLandscape: false,
                     onSelect: {
-                        router.showDetails(for: $0)
+                        showDetails(for: $0)
                     },
                     onSeeAll: {
                         seeAllList = .trending
@@ -252,6 +274,54 @@ struct HomeView: View {
                 .padding(.bottom, 24)
             }
         }
+    }
+
+    private func continuePendingPremiumDestination() {
+        guard let destination = router.takePendingPremiumDestination(),
+              storeKit.hasPremiumEntitlement else { return }
+
+        switch destination {
+        case .section(let section):
+            router.select(section)
+        case .addToWatchlist(let movie):
+            if !watchlistViewModel.isSaved(movie) {
+                watchlistViewModel.toggle(movie)
+            }
+        case .enablePlatforms(let providerIDs):
+            settings.setConnectedProviderIDs(
+                settings.connectedPlatformIDs.union(providerIDs)
+            )
+        case .selectProvider(let providerID):
+            settings.connectedPlatformIDs.insert(providerID)
+            settings.selectedProviderID = providerID
+        }
+    }
+
+    private var selectedQuickFilterProvider: WatchProvider? {
+        guard let selectedProviderID = activeSelectedProviderID else { return nil }
+        return settings.enabledWatchProviders.first { $0.id == selectedProviderID }
+    }
+
+    /// Prevent a persisted or externally-mutated Premium provider ID from
+    /// affecting content before StoreKit has verified current ownership.
+    private var activeSelectedProviderID: Int? {
+        guard let selectedProviderID = settings.selectedProviderID else { return nil }
+        guard storeKit.hasPremiumEntitlement
+                || SettingsStore.freeProviderIDs.contains(selectedProviderID) else {
+            return nil
+        }
+        return selectedProviderID
+    }
+
+    private var isPremiumUser: Bool {
+        storeKit.hasPremiumEntitlement
+    }
+
+    private func presentInitialSubscriptionIfNeeded() {
+        guard !hasHandledInitialSubscriptionPresentation,
+              storeKit.entitlementState != .loading else { return }
+
+        hasHandledInitialSubscriptionPresentation = true
     }
 
     private func seeAllHeader(_ list: SeeAllList) -> some View {
@@ -310,7 +380,7 @@ struct HomeView: View {
             ) {
                 ForEach(movies) { movie in
                     MovieCard(movie: movie) {
-                        router.showDetails(for: movie)
+                        showDetails(for: movie)
                     }
                 }
             }
@@ -380,7 +450,7 @@ struct HomeView: View {
                     .frame(height: 380)
                 } else {
                     PosterGrid(movies: results) {
-                        router.showDetails(for: $0)
+                        showDetails(for: $0)
                     }
                     .padding(.horizontal, 24)
                 }
@@ -391,11 +461,11 @@ struct HomeView: View {
 
     // UPDATED: adds a message specific to "connected but nothing found"
     private func emptyResultsMessage(title: String) -> String {
-        if let platform = settings.selectedPlatform {
+        if let provider = selectedQuickFilterProvider {
             return L10n.format(
                 "platform_filter_empty_format",
                 languageCode: settings.languageCode,
-                platform.name,
+                provider.name,
                 L10n.string(settings.region, languageCode: settings.languageCode)
             )
         }
@@ -437,10 +507,20 @@ struct HomeView: View {
             .frame(height: 400)
         } else {
             PosterGrid(movies: viewModel.searchResults) {
-                router.showDetails(for: $0)
+                showDetails(for: $0)
             }
             .padding(24)
         }
+    }
+
+    private func showDetails(for movie: Movie) {
+        let providerIDs: Set<Int>
+        if let providerID = activeSelectedProviderID {
+            providerIDs = [providerID]
+        } else {
+            providerIDs = settings.effectiveConnectedPlatformIDs(isPremium: isPremiumUser)
+        }
+        router.showDetails(for: movie, providerIDs: providerIDs)
     }
 }
 

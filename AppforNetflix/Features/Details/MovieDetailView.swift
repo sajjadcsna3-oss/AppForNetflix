@@ -2,171 +2,93 @@ import SwiftUI
 
 struct MovieDetailView: View {
     let movie: Movie
+    let selectedProviderIDs: Set<Int>
     let watchlistViewModel: WatchlistViewModel
     let recentViewModel: RecentViewModel
+    let libraryViewModel: LibraryViewModel
 
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
+    @StateObject private var viewModel: MovieDetailViewModel
     @State private var isSaved = false
-    @State private var platforms: [Platform] = []
-    @State private var cast: [CastMember] = []
-    @State private var similar: [Movie] = []
-    @State private var isLoadingExtras = true
+    @State private var isShowingPurchaseSuccess = false
+    @State private var isShowingProviderPicker = false
+    @State private var watchMessage: String?
+
+    init(
+        movie: Movie,
+        selectedProviderIDs: Set<Int>,
+        watchlistViewModel: WatchlistViewModel,
+        recentViewModel: RecentViewModel,
+        libraryViewModel: LibraryViewModel
+    ) {
+        self.movie = movie
+        self.selectedProviderIDs = selectedProviderIDs
+        self.watchlistViewModel = watchlistViewModel
+        self.recentViewModel = recentViewModel
+        self.libraryViewModel = libraryViewModel
+        _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieID: movie.id))
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color(hex: "0D0D11").ignoresSafeArea()
 
+            // Full-width TMDB backdrop, matching the supplied reference UI.
             GeometryReader { proxy in
                 AsyncImage(url: movie.backdropURL) { phase in
                     switch phase {
                     case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                     default:
                         Color(hex: "1F1F24")
                     }
                 }
-                .frame(width: proxy.size.width, height: 480)
+                .frame(width: proxy.size.width, height: 430)
                 .clipped()
-                .overlay(
+                .overlay {
                     LinearGradient(
                         colors: [
-                            Color(hex: "0D0D11").opacity(0.1),
-                            Color(hex: "0D0D11").opacity(0.8),
+                            Color(hex: "0D0D11").opacity(0.12),
+                            Color(hex: "0D0D11").opacity(0.55),
                             Color(hex: "0D0D11")
                         ],
-                        startPoint: .center,
+                        startPoint: .top,
                         endPoint: .bottom
                     )
-                )
+                }
+                .overlay {
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "0D0D11").opacity(0.10),
+                            Color(hex: "0D0D11").opacity(0.45)
+                        ],
+                        startPoint: .trailing,
+                        endPoint: .leading
+                    )
+                }
                 .allowsHitTesting(false)
             }
-            .frame(height: 480)
+            .frame(height: 430)
             .ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 40) {
-                    HStack(alignment: .top, spacing: 32) {
-                        AsyncImage(url: movie.posterURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            default:
-                                Theme.surfaceElevated
-                            }
-                        }
-                        .frame(width: 240, height: 360)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
-
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text(movie.title)
-                                .font(Theme.Font.title(36))
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
-                                .padding(.top, 20)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            HStack(spacing: 8) {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Theme.warning)
-
-                                Text(String(format: "%.1f", movie.voteAverage))
-                                    .fontWeight(.bold)
-
-                                Text("•").foregroundStyle(.white.opacity(0.3))
-                                Text(movie.year)
-                                Text("•").foregroundStyle(.white.opacity(0.3))
-                                Text(movie.runtimeLabel)
-
-                                if !genreLine.isEmpty {
-                                    Text("•").foregroundStyle(.white.opacity(0.3))
-                                    Text(genreLine).lineLimit(1)
-                                }
-                            }
-                            .font(Theme.Font.caption(14))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .lineLimit(1)
-
-                            HStack(spacing: 12) {
-                                Button {
-                                    openURL(watchNowURL())
-                                } label: {
-                                    Label(
-                                        L10n.string("Watch Now", languageCode: settings.languageCode),
-                                        systemImage: "play.fill"
-                                    )
-                                    .font(.system(size: 14, weight: .bold))
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 12)
-                                    .background(Theme.accent)
-                                    .foregroundStyle(.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                }
-                                .buttonStyle(.plain)
-
-                                Button {
-                                    watchlistViewModel.toggle(movie)
-                                    isSaved = watchlistViewModel.isSaved(movie)
-                                } label: {
-                                    Label(
-                                        isSaved
-                                            ? L10n.string("In My List", languageCode: settings.languageCode)
-                                            : L10n.string("My List", languageCode: settings.languageCode),
-                                        systemImage: isSaved ? "checkmark" : "plus"
-                                    )
-                                    .font(.system(size: 14, weight: .bold))
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 12)
-                                    .background(Color.white.opacity(0.15))
-                                    .foregroundStyle(.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                }
-                                .buttonStyle(.plain)
-
-                                Button {
-                                    openURL(trailerSearchURL())
-                                } label: {
-                                    Label(
-                                        L10n.string("Trailer", languageCode: settings.languageCode),
-                                        systemImage: "video"
-                                    )
-                                    .font(.system(size: 14, weight: .bold))
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 12)
-                                    .background(Color.white.opacity(0.15))
-                                    .foregroundStyle(.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            Text(movie.overview)
-                                .font(Theme.Font.body(15))
-                                .foregroundStyle(.white.opacity(0.75))
-                                .lineSpacing(5)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.top, 8)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 80)
-                    .padding(.horizontal, 40)
+                    // Keep the PDF/reference composition: poster on the left,
+                    // movie information and actions on the right.
+                    headerRow(posterWidth: 230, posterHeight: 345)
+                        .padding(.top, 54)
+                        .padding(.horizontal, 40)
 
                     sectionContainer(title: L10n.string("AVAILABLE ON", languageCode: settings.languageCode)) {
-                        if isLoadingExtras && platforms.isEmpty {
+                        if viewModel.isLoading && viewModel.platforms.isEmpty {
                             ProgressView().controlSize(.small)
-                        } else if platforms.isEmpty {
-                            // FIX: was a bare Text sitting flush against the
-                            // section header with no container — looked
-                            // unfinished. Now a small icon + text card,
-                            // matching the app's existing badge style
-                            // (rounded rect, subtle fill + hairline border).
+                        } else if viewModel.platforms.isEmpty {
                             HStack(spacing: 10) {
                                 Image(systemName: "tv.slash")
                                     .font(.system(size: 13))
@@ -178,6 +100,7 @@ struct MovieDetailView: View {
                                 ))
                                 .font(Theme.Font.caption(13))
                                 .foregroundStyle(.white.opacity(0.5))
+                                .fixedSize(horizontal: false, vertical: true)
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
@@ -189,18 +112,20 @@ struct MovieDetailView: View {
                             )
                             .padding(.horizontal, 40)
                         } else {
-                            HStack(spacing: 12) {
-                                ForEach(platforms) { platform in
-                                    HeroPlatformBadge(platform: platform)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 10) {
+                                    ForEach(displayedPlatforms) { platform in
+                                        HeroPlatformBadge(platform: platform)
+                                    }
                                 }
+                                .padding(.horizontal, 40)
                             }
-                            .padding(.horizontal, 40)
                         }
                     }
 
-                    if !cast.isEmpty {
+                    if !viewModel.cast.isEmpty {
                         sectionContainer(title: L10n.string("CAST", languageCode: settings.languageCode)) {
-                            HorizontalScrollWithArrows(items: Array(cast.prefix(15))) { member in
+                            HorizontalScrollWithArrows(items: Array(viewModel.cast.prefix(15))) { member in
                                 VStack(spacing: 8) {
                                     AsyncImage(url: member.profileURL) { phase in
                                         switch phase {
@@ -236,11 +161,11 @@ struct MovieDetailView: View {
                         }
                     }
 
-                    if !similar.isEmpty {
+                    if !viewModel.similarMovies.isEmpty {
                         sectionContainer(title: L10n.string("SIMILAR TITLES", languageCode: settings.languageCode)) {
-                            HorizontalScrollWithArrows(items: Array(similar.prefix(12))) { item in
+                            HorizontalScrollWithArrows(items: Array(viewModel.similarMovies.prefix(12))) { item in
                                 MovieCard(movie: item) {
-                                    router.showDetails(for: item)
+                                    router.showDetails(for: item, providerIDs: selectedProviderIDs)
                                 }
                                 .frame(width: 150)
                             }
@@ -266,45 +191,200 @@ struct MovieDetailView: View {
         }
         .background(Color(hex: "0D0D11"))
         .foregroundStyle(Theme.textPrimary)
+        // The reference design is a wide desktop detail sheet. Prevent the
+        // window from becoming narrow enough to collapse it into a phone-like UI.
         .frame(
-            minWidth: 1000,
-            idealWidth: 1000,
-            minHeight: 900,
-            idealHeight: 900
+            minWidth: 900,
+            idealWidth: 1040,
+            minHeight: 620,
+            idealHeight: 760
         )
         .onAppear {
             isSaved = watchlistViewModel.isSaved(movie)
             recentViewModel.record(movie)
         }
-        .task(id: settings.languageCode) {
-            await loadExtras()
+        .task(id: "\(settings.languageCode)|\(regionCode)") {
+            await viewModel.load(region: regionCode)
+        }
+        .sheet(isPresented: $isShowingProviderPicker) {
+            StreamingProviderPicker(providers: contextualWatchProviders) { provider in
+                open(provider)
+            }
+        }
+        .alert(
+            L10n.string("Purchase Information", languageCode: settings.languageCode),
+            isPresented: $isShowingPurchaseSuccess
+        ) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(L10n.string("Your purchase was successful.", languageCode: settings.languageCode))
+        }
+        .alert(
+            L10n.string("Watch Now", languageCode: settings.languageCode),
+            isPresented: Binding(
+                get: { watchMessage != nil },
+                set: { if !$0 { watchMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { watchMessage = nil }
+        } message: {
+            Text(watchMessage ?? "")
         }
     }
 
-    private func loadExtras() async {
-        isLoadingExtras = true
-        let region = Country.find(settings.region).code
+    // MARK: - Header layouts (wide / narrow)
 
-        async let watchmodePlatforms = WatchmodeService.shared.platforms(
-            forTMDBId: movie.id,
-            regionCode: region
-        )
-        async let credits = loadCast()
-        async let similarMovies = loadSimilar()
-
-        let (p, c, s) = await (watchmodePlatforms, credits, similarMovies)
-        platforms = p
-        cast = c
-        similar = s
-        isLoadingExtras = false
+    @ViewBuilder
+    private func headerRow(posterWidth: CGFloat, posterHeight: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 32) {
+            posterImage(width: posterWidth, height: posterHeight)
+            infoColumn
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func loadCast() async -> [CastMember] {
-        (try? await TMDBService.shared.credits(movieId: movie.id)) ?? []
+    @ViewBuilder
+    private func headerColumn(posterWidth: CGFloat, posterHeight: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
+            posterImage(width: posterWidth, height: posterHeight)
+            infoColumn
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func loadSimilar() async -> [Movie] {
-        (try? await TMDBService.shared.similar(movieId: movie.id)) ?? []
+    private func posterImage(width: CGFloat, height: CGFloat) -> some View {
+        AsyncImage(url: movie.posterURL) { phase in
+            switch phase {
+            case .success(let image):
+                image.resizable().aspectRatio(contentMode: .fill)
+            default:
+                Theme.surfaceElevated
+            }
+        }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
+    }
+
+    private var infoColumn: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(movie.title)
+                .font(Theme.Font.title(36))
+                .fontWeight(.bold)
+                .foregroundStyle(.white)
+                .padding(.top, 20)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    Image(systemName: "star.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.warning)
+
+                Text(String(format: "%.1f", movie.voteAverage))
+                    .fontWeight(.bold)
+
+                Text("•").foregroundStyle(.white.opacity(0.3))
+                Text(movie.year)
+                Text("•").foregroundStyle(.white.opacity(0.3))
+                Text(movie.runtimeLabel)
+
+                if !genreLine.isEmpty {
+                    Text("•").foregroundStyle(.white.opacity(0.3))
+                    Text(genreLine).lineLimit(1)
+                }
+            }
+                .font(Theme.Font.caption(14))
+                .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(1)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Theme.warning)
+                        Text(String(format: "%.1f", movie.voteAverage)).fontWeight(.bold)
+                        Text("•").foregroundStyle(.white.opacity(0.3))
+                        Text(movie.year)
+                        Text("•").foregroundStyle(.white.opacity(0.3))
+                        Text(movie.runtimeLabel)
+                    }
+                    if !genreLine.isEmpty {
+                        Text(genreLine)
+                    }
+                }
+                .font(Theme.Font.caption(14))
+                .foregroundStyle(.white.opacity(0.7))
+            }
+
+            // PDF/reference layout: all three primary actions stay on one row.
+            HStack(spacing: 12) {
+                Button {
+                    openWatchDestination()
+                } label: {
+                    Label(
+                        L10n.string("Watch Now", languageCode: settings.languageCode),
+                        systemImage: "play.fill"
+                    )
+                    .font(.system(size: 14, weight: .bold))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 11)
+                    .background(Theme.accent)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isLoading)
+
+                Button {
+                    openURL(trailerSearchURL())
+                } label: {
+                    Label(
+                        L10n.string("Trailer", languageCode: settings.languageCode),
+                        systemImage: "video"
+                    )
+                    .font(.system(size: 14, weight: .bold))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 11)
+                    .background(Color.white.opacity(0.15))
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    watchlistViewModel.toggle(movie)
+                    isSaved = watchlistViewModel.isSaved(movie)
+                } label: {
+                    Label(
+                        isSaved
+                            ? L10n.string("In My List", languageCode: settings.languageCode)
+                            : L10n.string("My List", languageCode: settings.languageCode),
+                        systemImage: isSaved ? "checkmark" : "plus"
+                    )
+                    .font(.system(size: 14, weight: .bold))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 11)
+                    .background(Color.white.opacity(0.15))
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+            }
+
+            MovieLibraryControls(
+                movie: movie,
+                libraryViewModel: libraryViewModel
+            )
+
+            Text(movie.overview)
+                .font(Theme.Font.body(15))
+                .foregroundStyle(.white.opacity(0.75))
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 8)
+        }
     }
 
     private var genreLine: String {
@@ -316,42 +396,79 @@ struct MovieDetailView: View {
             .joined(separator: " • ")
     }
 
-    private func watchNowURL() -> URL {
-        let query = movie.title.addingPercentEncoding(
-            withAllowedCharacters: .urlQueryAllowed
-        ) ?? movie.title
-
-        if let platform = platforms.first {
-            let base: String
-
-            switch platform.id {
-            case Platform.netflix.id:
-                base = "https://www.netflix.com/search?q="
-            case Platform.primeVideo.id:
-                base = "https://www.amazon.com/s?k="
-            case Platform.disneyPlus.id:
-                base = "https://www.disneyplus.com/search?q="
-            case Platform.appleTVPlus.id:
-                base = "https://tv.apple.com/search?term="
-            case Platform.hulu.id:
-                base = "https://www.hulu.com/search?q="
-            case Platform.max.id:
-                base = "https://www.max.com/search?q="
-            case Platform.peacock.id:
-                base = "https://www.peacocktv.com/search?q="
-            default:
-                base = "https://www.google.com/search?q=watch+"
-            }
-
-            return URL(string: base + query) ?? fallbackSearchURL(query: query)
-        }
-
-        return fallbackSearchURL(query: query)
+    private var regionCode: String {
+        settings.regionCode
     }
 
-    private func fallbackSearchURL(query: String) -> URL {
-        URL(string: "https://www.google.com/search?q=watch+\(query)")
-            ?? URL(string: "https://www.google.com")!
+    /// Keep Available On aligned with the exact provider context used by the
+    /// top selector. This removes unrelated channel/ad variants and reuses the
+    /// selector's canonical TMDB logo and display name.
+    private var displayedPlatforms: [WatchProvider] {
+        let contextualPlatforms = selectedProviderIDs.isEmpty
+            ? viewModel.platforms
+            : viewModel.platforms.filter { selectedProviderIDs.contains($0.id) }
+
+        return contextualPlatforms.map { provider in
+            settings.availableWatchProviders.first { $0.id == provider.id }
+                .map { canonical in
+                    WatchProvider(
+                        id: provider.id,
+                        name: canonical.name,
+                        logoPath: canonical.logoPath,
+                        displayPriority: provider.displayPriority,
+                        monetizationTypes: provider.monetizationTypes
+                    )
+                } ?? provider
+        }
+    }
+
+    private var contextualWatchProviders: [WatchProvider] {
+        let candidates = selectedProviderIDs.isEmpty
+            ? viewModel.platforms
+            : viewModel.platforms.filter { selectedProviderIDs.contains($0.id) }
+
+        return candidates.sorted { lhs, rhs in
+            let lhsStream = lhs.monetizationTypes.contains(.flatrate)
+            let rhsStream = rhs.monetizationTypes.contains(.flatrate)
+            if lhsStream != rhsStream { return lhsStream }
+            return lhs.displayPriority < rhs.displayPriority
+        }
+    }
+
+    private func openWatchDestination() {
+        if let providerErrorMessage = viewModel.providerErrorMessage {
+            watchMessage = providerErrorMessage
+            return
+        }
+
+        guard !contextualWatchProviders.isEmpty else {
+            watchMessage = L10n.string(
+                "This title is not currently available on a supported streaming platform in your region.",
+                languageCode: settings.languageCode
+            )
+            return
+        }
+
+        if contextualWatchProviders.count == 1,
+           let provider = contextualWatchProviders.first {
+            open(provider)
+        } else {
+            isShowingProviderPicker = true
+        }
+    }
+
+    private func open(_ provider: WatchProvider) {
+        guard let url = StreamingProviderLinkBuilder.searchURL(
+            for: provider,
+            title: movie.title
+        ) else {
+            watchMessage = L10n.string(
+                "Direct link is unavailable for this provider.",
+                languageCode: settings.languageCode
+            )
+            return
+        }
+        openURL(url)
     }
 
     private func trailerSearchURL() -> URL {

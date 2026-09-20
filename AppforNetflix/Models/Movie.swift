@@ -13,11 +13,9 @@ struct Movie: Identifiable, Codable, Hashable {
     let genreIDs: [Int]
     let runtimeMinutes: Int?
 
-    /// Platforms this title is available on. TMDB doesn't provide this for
-    /// free, so it's populated from `WatchProvidersService` when available
-    /// and defaults to an empty list otherwise — the UI treats that as
-    /// "availability unknown" rather than showing a wrong platform.
-    var platforms: [Platform] = []
+    /// Country-specific streaming, rental, and purchase options returned by
+    /// TMDB's JustWatch-powered watch-provider endpoint.
+    var platforms: [WatchProvider] = []
 
     var year: String {
         guard let releaseDate, let year = releaseDate.split(separator: "-").first else { return "—" }
@@ -33,12 +31,12 @@ struct Movie: Identifiable, Codable, Hashable {
 
     var posterURL: URL? {
         guard let posterPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
+        return AppConfiguration.tmdbPosterBaseURL.appending(path: posterPath)
     }
 
     var backdropURL: URL? {
         guard let backdropPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/original\(backdropPath)")
+        return AppConfiguration.tmdbBackdropBaseURL.appending(path: backdropPath)
     }
 
     enum CodingKeys: String, CodingKey {

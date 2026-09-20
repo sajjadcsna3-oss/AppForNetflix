@@ -1,27 +1,20 @@
 import SwiftUI
 import SwiftData
-import FirebaseCore
 
 @main
 struct AppForNetflix: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var router = AppRouter()
     @StateObject private var settingsStore = SettingsStore()
-    @StateObject private var authStore: AuthStore
     @StateObject private var storeKit = StoreKitService()
-
-    init() {
-        FirebaseApp.configure()
-        _authStore = StateObject(wrappedValue: AuthStore())
-    }
-
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(router)
                 .environmentObject(settingsStore)
-                .environmentObject(authStore)
                 .environmentObject(storeKit)
-                .frame(minWidth: 900, minHeight: 600)
+               
+                .frame(minWidth: 1200, minHeight: 800)
                 .preferredColorScheme(settingsStore.appearance.colorScheme)
                 .environment(\.locale, Locale(identifier: settingsStore.languageCode))
                 .environment(
@@ -35,9 +28,15 @@ struct AppForNetflix: App {
                 .onChange(of: storeKit.purchasedProductIDs) {
                     settingsStore.updatePremiumEntitlement(storeKit.hasPremiumEntitlement)
                 }
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .active else { return }
+                    Task { await storeKit.refreshEntitlements()
+                    }
+                }
         }
-        .modelContainer(for: [WatchlistItem.self, RecentlyViewedItem.self])
-        .windowResizability(.contentSize)
+        .modelContainer(for: [WatchlistItem.self, RecentlyViewedItem.self, LibraryItem.self])
+     
+        .windowResizability(.contentMinSize)
     }
 }
 

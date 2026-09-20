@@ -3,6 +3,8 @@ import StoreKit
 
 struct SubscriptionView: View {
 
+    var onPurchaseSuccess: () -> Void = { }
+
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var storeKit: StoreKitService
 
@@ -16,29 +18,32 @@ struct SubscriptionView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
 
-            HStack(spacing: 0) {
-
+            HStack(alignment: .top, spacing: 0) {
                 benefitsColumn
-                    .frame(width: 380)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 40)
-                    .padding(.top, 10)
+                    .padding(.leading, 36)
+                    .padding(.trailing, 32)
+                    .padding(.top, 70)
+                    .padding(.bottom, 36)
+                    .frame(width: 400, height: 620, alignment: .topLeading)
+                    .background(Color(hex: "1D1D1F"))
 
-                Divider()
-                    .background(Color.white.opacity(0.1))
-                    .padding(.vertical, 32)
+                Rectangle()
+                    .fill(Color.white.opacity(0.055))
+                    .frame(width: 1, height: 620)
 
                 plansColumn
-                    .frame(width: 440)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 40)
+                    .padding(.horizontal, 36)
+                    .padding(.top, 68)
+                    .padding(.bottom, 32)
+                    .frame(width: 419, height: 620, alignment: .topLeading)
+                    .background(Color(hex: "222224"))
             }
 
             closeButton
         }
-        .background(Color(hex: "151517"))
+        .background(Color(hex: "1D1D1F"))
         .foregroundStyle(.white)
-        .frame(width: 920, height: 600)
+        .frame(width: 820, height: 620  )
         .task {
             await prepareStoreKit()
         }
@@ -70,7 +75,7 @@ struct SubscriptionView: View {
             Image(systemName: "xmark")
                 .font(
                     .system(
-                        size: 13,
+                        size: 12,
                         weight: .semibold
                     )
                 )
@@ -80,8 +85,8 @@ struct SubscriptionView: View {
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
-        .padding(.leading, 24)
-        .padding(.top, 24)
+        .padding(.leading, 18)
+        .padding(.top, 18)
     }
 
     // MARK: - Benefits Column
@@ -89,7 +94,7 @@ struct SubscriptionView: View {
     private var benefitsColumn: some View {
         VStack(
             alignment: .leading,
-            spacing: 30
+            spacing: 28
         ) {
 
             Text(
@@ -98,16 +103,15 @@ struct SubscriptionView: View {
                     languageCode: settings.languageCode
                 )
             )
-            .font(Theme.Font.title(28))
+            .font(Theme.Font.title(24))
             .fontWeight(.bold)
             .fixedSize(
                 horizontal: false,
                 vertical: true
             )
-            .lineSpacing(4)
-            .padding(.bottom, 4)
+            .lineSpacing(2)
 
-            VStack(spacing: 12) {
+            VStack(spacing: 11) {
 
                 ForEach(PremiumBenefit.all) { benefit in
 
@@ -128,7 +132,7 @@ struct SubscriptionView: View {
 
                         VStack(
                             alignment: .leading,
-                            spacing: 4
+                            spacing: 2
                         ) {
 
                             Text(
@@ -137,7 +141,7 @@ struct SubscriptionView: View {
                                     languageCode: settings.languageCode
                                 )
                             )
-                            .font(Theme.Font.body(14))
+                            .font(Theme.Font.body(13))
                             .fontWeight(.semibold)
 
                             Text(
@@ -146,7 +150,7 @@ struct SubscriptionView: View {
                                     languageCode: settings.languageCode
                                 )
                             )
-                            .font(Theme.Font.caption(12))
+                            .font(Theme.Font.caption(11))
                             .foregroundStyle(
                                 .white.opacity(0.6)
                             )
@@ -157,7 +161,9 @@ struct SubscriptionView: View {
                             )
                         }
                     }
-                    .padding(16)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 13)
+                    .frame(minHeight: 65)
                     .frame(
                         maxWidth: .infinity,
                         alignment: .leading
@@ -167,12 +173,12 @@ struct SubscriptionView: View {
                     )
                     .clipShape(
                         RoundedRectangle(
-                            cornerRadius: 12
+                            cornerRadius: 10
                         )
                     )
                     .overlay {
                         RoundedRectangle(
-                            cornerRadius: 12
+                            cornerRadius: 10
                         )
                         .stroke(
                             Color.white.opacity(0.08),
@@ -191,7 +197,7 @@ struct SubscriptionView: View {
     private var plansColumn: some View {
         VStack(
             alignment: .leading,
-            spacing: 16
+            spacing: 12
         ) {
 
             HStack {
@@ -202,37 +208,37 @@ struct SubscriptionView: View {
                         languageCode: settings.languageCode
                     )
                 )
-                .font(Theme.Font.title(22))
+                .font(Theme.Font.title(16))
                 .fontWeight(.bold)
 
                 Spacer()
 
-                Button(
-                    L10n.string(
-                        "Restore",
-                        languageCode: settings.languageCode
-                    )
-                ) {
-                    Task {
-                        await restorePurchases()
-                    }
+                Button(L10n.string("Restore", languageCode: settings.languageCode)) {
+                    Task { await restorePurchases() }
                 }
                 .buttonStyle(.plain)
-                .font(Theme.Font.body(13))
+                .font(Theme.Font.caption(10))
                 .foregroundStyle(Theme.accent)
+                .disabled(storeKit.isLoading)
             }
             .padding(.bottom, 8)
 
             // MARK: Plans
 
-            VStack(spacing: 12) {
+            VStack(spacing: 9) {
 
                 ForEach(availablePlans) { plan in
                     planRow(plan)
                 }
             }
 
-            Spacer()
+            if !storeKit.isConfigured {
+                purchaseAvailabilityMessage("Purchases are not configured for this build.")
+            } else if let message = storeKit.lastErrorMessage {
+                purchaseAvailabilityMessage(message)
+            }
+
+            Spacer(minLength: 0)
 
             // MARK: Continue Button
 
@@ -250,12 +256,12 @@ struct SubscriptionView: View {
                 )
                 .font(
                     .system(
-                        size: 16,
+                        size: 15,
                         weight: .bold
                     )
                 )
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, 15)
                 .background(Theme.accent)
                 .foregroundStyle(.white)
                 .clipShape(
@@ -265,7 +271,7 @@ struct SubscriptionView: View {
                 )
             }
             .buttonStyle(.plain)
-            .disabled(storeKit.isLoading)
+            .disabled(storeKit.isLoading || selectedProduct == nil)
 
             // MARK: Terms & Privacy
 
@@ -296,7 +302,7 @@ struct SubscriptionView: View {
                 }
             }
             .buttonStyle(.plain)
-            .font(Theme.Font.caption(11))
+            .font(Theme.Font.caption(10))
             .foregroundStyle(
                 .white.opacity(0.4)
             )
@@ -318,87 +324,92 @@ struct SubscriptionView: View {
 
         } label: {
 
-            HStack {
+            HStack(spacing: 0) {
 
                 // MARK: Plan Information
 
                 VStack(
                     alignment: .leading,
-                    spacing: 6
+                    spacing: 3
                 ) {
 
                     HStack(spacing: 8) {
 
                         Text(
                             L10n.string(
-                                plan.title,
+                                displayName(for: plan),
                                 languageCode: settings.languageCode
                             )
                         )
-                        .font(Theme.Font.body(15))
+                        .font(Theme.Font.body(13))
                         .fontWeight(.bold)
+                        .lineLimit(2)
+                        .frame(
+                            width: titleWidth(for: plan),
+                            alignment: .leading
+                        )
 
-                        if let badge = plan.badge {
+                        if let badge = badge(for: plan) {
                             badgeView(text: badge)
                         }
                     }
 
                     Text(
                         L10n.string(
-                            plan.detail,
+                            displayDescription(for: plan),
                             languageCode: settings.languageCode
                         )
                     )
-                    .font(Theme.Font.caption(12))
+                    .font(Theme.Font.caption(10))
                     .foregroundStyle(
                         .white.opacity(0.6)
                     )
                 }
+                .frame(width: 170, alignment: .leading)
 
                 Spacer()
 
                 // MARK: Price
 
-                VStack(
-                    alignment: .trailing,
-                    spacing: 2
-                ) {
+                HStack(alignment: .firstTextBaseline, spacing: 1) {
+                    Text(displayPrice(for: plan))
+                        .font(Theme.Font.heading(21))
+                        .fontWeight(.bold)
+                        .lineLimit(1)
 
-                    Text(
-                        storeKit.product(for: plan)?.displayPrice
-                        ?? plan.fallbackPrice
-                    )
-                    .font(Theme.Font.heading(20))
-                    .fontWeight(.bold)
-
-                    if !plan.period.isEmpty {
+                    if !displayPeriod(for: plan).isEmpty {
 
                         Text(
                             L10n.string(
-                                plan.period,
+                                displayPeriod(for: plan),
                                 languageCode: settings.languageCode
                             )
                         )
-                        .font(Theme.Font.caption(11))
+                        .font(Theme.Font.caption(10))
                         .foregroundStyle(
                             .white.opacity(0.5)
                         )
+                        .lineLimit(1)
                     }
                 }
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(1)
             }
-            .padding(18)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .frame(height: plan == .weekly ? 64 : 78)
             .background(
                 Color.white.opacity(0.04)
             )
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: 12
+                    cornerRadius: 10
                 )
             )
             .overlay {
 
                 RoundedRectangle(
-                    cornerRadius: 12
+                    cornerRadius: 10
                 )
                 .stroke(
                     isSelected
@@ -430,12 +441,19 @@ struct SubscriptionView: View {
         Text(localizedText)
             .font(
                 .system(
-                    size: 10,
+                    size: 9,
                     weight: .heavy
                 )
             )
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+            .frame(
+                width: text.contains("TRIAL") ? 66 :
+                    (text.contains("VALUE") ? 43 : nil),
+                alignment: .leading
+            )
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(
                 isYellowStyle
                 ? Color(hex: "4D3E13")
@@ -460,7 +478,41 @@ struct SubscriptionView: View {
     }
 
     private var availablePlans: [SubscriptionPlan] {
-        SubscriptionPlan.allCases
+        let configured = SubscriptionPlan.allCases.filter(storeKit.isPlanConfigured)
+        return configured.isEmpty ? SubscriptionPlan.allCases : configured
+    }
+
+    private func displayPrice(for plan: SubscriptionPlan) -> String {
+        plan.fallbackDisplayPrice
+    }
+
+    private func displayName(for plan: SubscriptionPlan) -> String {
+        plan.title
+    }
+
+    private func displayDescription(for plan: SubscriptionPlan) -> String {
+        plan.detail
+    }
+
+    private func displayPeriod(for plan: SubscriptionPlan) -> String {
+        plan.period
+    }
+
+    private func titleWidth(for plan: SubscriptionPlan) -> CGFloat {
+        switch plan {
+        case .weekly:
+            return 82
+        case .monthly:
+            return 55
+        case .annual:
+            return 48
+        case .lifetime:
+            return 64
+        }
+    }
+
+    private func badge(for plan: SubscriptionPlan) -> String? {
+        plan.badge
     }
 
     private func prepareStoreKit() async {
@@ -502,10 +554,9 @@ struct SubscriptionView: View {
             switch result {
 
             case .purchased:
-
-                showAlert(
-                    "Your purchase was successful."
-                )
+                settings.updatePremiumEntitlement(storeKit.hasPremiumEntitlement)
+                onPurchaseSuccess()
+                dismiss()
 
             case .pending:
 
@@ -518,40 +569,29 @@ struct SubscriptionView: View {
             }
 
         } catch {
-
-            showAlert(
-                "The purchase could not be completed. Please try again."
-            )
+            showAlert(error.localizedDescription)
         }
     }
 
-    // MARK: - Restore
-
     private func restorePurchases() async {
-
         do {
-
             try await storeKit.restorePurchases()
-
-            if storeKit.hasPremiumEntitlement {
-
-                showAlert(
-                    "Your purchases were restored."
-                )
-
-            } else {
-
-                showAlert(
-                    "No previous purchases were found."
-                )
-            }
-
-        } catch {
-
+            settings.updatePremiumEntitlement(storeKit.hasPremiumEntitlement)
             showAlert(
-                "Purchases could not be restored. Please try again."
+                storeKit.hasPremiumEntitlement
+                    ? "Your purchases were restored."
+                    : "No previous purchases were found."
             )
+        } catch {
+            showAlert("Purchases could not be restored. Please try again.")
         }
+    }
+
+    private func purchaseAvailabilityMessage(_ message: String) -> some View {
+        Text(L10n.string(message, languageCode: settings.languageCode))
+            .font(Theme.Font.caption(12))
+            .foregroundStyle(.white.opacity(0.65))
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - URL

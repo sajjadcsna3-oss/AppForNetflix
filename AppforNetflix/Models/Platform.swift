@@ -5,6 +5,7 @@ struct Platform: Identifiable, Codable, Hashable {
     let id: Int
     /// TMDB watch-provider ID. nil means this platform is UI-only and cannot be queried via TMDB discover.
     let tmdbProviderID: Int?
+    var alternativeTMDBProviderIDs: Set<Int> = []
     let name: String
     let logoAssetName: String        // Full Wordmark Logo (For Home Page Filter Bar)
     let squareLogoAssetName: String  // Square / Circle Badge (For TopBar Circles & Settings)
@@ -13,6 +14,11 @@ struct Platform: Identifiable, Codable, Hashable {
     var logoScale: CGFloat = 1.0
 
     var color: Color { Color(hex: tint) }
+    var tmdbProviderIDs: Set<Int> {
+        guard let tmdbProviderID else { return alternativeTMDBProviderIDs }
+        return alternativeTMDBProviderIDs.union([tmdbProviderID])
+    }
+    var requiresPremium: Bool { id != Self.netflix.id && id != Self.primeVideo.id }
 
     // Asset Names from your Xcode
 
@@ -25,7 +31,7 @@ struct Platform: Identifiable, Codable, Hashable {
     )
     static let primeVideo = Platform(
         id: 9,
-        tmdbProviderID: 9, name: "Prime Video",
+        tmdbProviderID: 9, name: "Amazon Prime Video",
         logoAssetName: "amazon-prime-video-seeklogo 1",
         squareLogoAssetName: "PrimeVideologo",
         tint: "00A8E1"
@@ -54,8 +60,10 @@ struct Platform: Identifiable, Codable, Hashable {
         logoScale: 0.72
     )
     static let max = Platform(
-        id: 384,
-        tmdbProviderID: 384, name: "Max",
+        id: 1899,
+        tmdbProviderID: 1899,
+        alternativeTMDBProviderIDs: [384],
+        name: "Max",
         logoAssetName: "Maxlogo",
         squareLogoAssetName: "Maxlogo",
         tint: "9B51E0"
@@ -66,6 +74,20 @@ struct Platform: Identifiable, Codable, Hashable {
         logoAssetName: "Peacocklogo",
         squareLogoAssetName: "Peacocklogo",
         tint: "F5A623"
+    )
+    static let paramountPlus = Platform(
+        id: 531,
+        tmdbProviderID: 531, name: "Paramount+",
+        logoAssetName: "",
+        squareLogoAssetName: "",
+        tint: "0064FF"
+    )
+    static let hbo = Platform(
+        id: 118,
+        tmdbProviderID: 118, name: "HBO",
+        logoAssetName: "",
+        squareLogoAssetName: "",
+        tint: "8A2BE2"
     )
     static let imax = Platform(
         id: 9001,
@@ -79,8 +101,33 @@ struct Platform: Identifiable, Codable, Hashable {
     )
 
     /// Order matches the Figma "All Platforms" bar exactly:
-    static let filterBar: [Platform] = [.netflix, .primeVideo, .disneyPlus, .appleTVPlus, .imax, .hulu]
+    static let filterBar: [Platform] = [
+        .netflix, .primeVideo, .disneyPlus, .appleTVPlus, .max,
+        .hulu, .peacock, .paramountPlus, .hbo
+    ]
 
     /// Order matches Settings -> Streaming Platforms:
-    static let all: [Platform] = [.netflix, .primeVideo, .disneyPlus, .appleTVPlus, .max, .hulu, .peacock]
+    static let all: [Platform] = filterBar
+
+    static func definition(matching provider: WatchProvider) -> Platform? {
+        if let exact = all.first(where: { $0.tmdbProviderIDs.contains(provider.id) }) {
+            return exact
+        }
+
+        let name = provider.name.lowercased()
+        return all.first { platform in
+            switch platform.id {
+            case netflix.id: return name.contains("netflix")
+            case primeVideo.id: return name.contains("prime video") || name.contains("amazon")
+            case disneyPlus.id: return name.contains("disney")
+            case appleTVPlus.id: return name.contains("apple tv")
+            case max.id: return name == "max" || name.contains("hbo max")
+            case hulu.id: return name.contains("hulu")
+            case peacock.id: return name.contains("peacock")
+            case paramountPlus.id: return name.contains("paramount")
+            case hbo.id: return name == "hbo" || name.hasPrefix("hbo ")
+            default: return false
+            }
+        }
+    }
 }

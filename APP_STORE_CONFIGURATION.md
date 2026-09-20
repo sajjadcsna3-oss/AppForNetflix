@@ -6,8 +6,8 @@
 when setting up another machine. The tracked `Shared.xcconfig` intentionally
 contains no credentials or production URLs.
 
-TMDB and Watchmode credentials compiled into a distributed Mac app can still be
-recovered. Apply provider-side restrictions where available. For credentials
+TMDB credentials compiled into a distributed Mac app can still be recovered.
+Apply provider-side restrictions where available. For credentials
 that must remain secret, use a backend flow: Mac app → your backend → provider.
 
 ## StoreKit products
@@ -41,24 +41,21 @@ does not contain a fake production URL.
 
 The privacy policy and App Store privacy answers should accurately describe:
 
-- Firebase Authentication, Firebase user ID, name, and email address
-- Account creation, password-reset email, profile updates, and deletion
-- TMDB metadata and images, Watchmode, and JustWatch provider availability
+- TMDB metadata, images, and JustWatch-powered watch-provider availability
 - External streaming-provider, Google, and YouTube links
 - Local preferences, selected language, platform settings, watchlist, and recent history
 - Which information stays on-device and which is sent to service providers
-- Retention, account deletion, contact details, and user privacy rights
+- Retention, contact details, and user privacy rights
 
 ## Attribution and rights
 
 Add TMDB's approved, unmodified logo to the asset catalog with the exact asset
 name `TMDBLogo`. The About & Credits UI is already prepared to display it and
-contains TMDB's required notice plus explicit Watchmode and JustWatch credits.
+contains TMDB's required notice plus explicit JustWatch credit.
 
 Before commercial release, independently verify and document:
 
 - A commercial TMDB license and its attribution requirements
-- Watchmode plan, caching, redistribution, and attribution rights
 - JustWatch attribution requirements for TMDB watch-provider data
 - Rights to all poster, backdrop, cast, and metadata content
 - Rights to Netflix, Prime Video, Disney+, Apple TV+, Hulu, Max, Peacock, and

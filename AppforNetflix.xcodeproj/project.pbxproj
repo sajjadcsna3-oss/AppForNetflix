@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9AE4157E304C0CC500204B64 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 9AE4157D304C0CC500204B64 /* FirebaseAuth */; };
-		9AE41580304C0CC500204B64 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9AE4157F304C0CC500204B64 /* FirebaseCore */; };
+		9AA30BFD305BF609007BA587 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA30BFC305BF609007BA587 /* StoreKit.framework */; };
 		9AE41584304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9AE41583304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9AA30BFC305BF609007BA587 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		9AE4128D304C0B5500204B64 /* AppforNetflix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppforNetflix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AE41583304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf"; sourceTree = SOURCE_ROOT; };
 		A1000001304C0CC500204B64 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
@@ -45,8 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9AE41580304C0CC500204B64 /* FirebaseCore in Frameworks */,
-				9AE4157E304C0CC500204B64 /* FirebaseAuth in Frameworks */,
+				9AA30BFD305BF609007BA587 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +74,7 @@
 		9AE4157C304C0CC500204B64 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9AA30BFC305BF609007BA587 /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -108,8 +108,6 @@
 			);
 			name = AppforNetflix;
 			packageProductDependencies = (
-				9AE4157D304C0CC500204B64 /* FirebaseAuth */,
-				9AE4157F304C0CC500204B64 /* FirebaseCore */,
 			);
 			productName = AppforNetflix1;
 			productReference = 9AE4128D304C0B5500204B64 /* AppforNetflix.app */;
@@ -140,7 +138,6 @@
 			mainGroup = 9AE41284304C0B5500204B64;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				9AE4157B304C0C0100204B64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9AE4128E304C0B5500204B64 /* Products */;
@@ -298,10 +295,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N8UCX7XSTV;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -325,13 +324,12 @@
 				INFOPLIST_KEY_StoreKitWeeklyProductID = "$(STOREKIT_WEEKLY_PRODUCT_ID)";
 				INFOPLIST_KEY_TMDBAPIKey = "$(TMDB_API_KEY)";
 				INFOPLIST_KEY_TermsOfServiceURL = "$(TERMS_OF_SERVICE_URL)";
-				INFOPLIST_KEY_WatchmodeAPIKey = "$(WATCHMODE_API_KEY)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Sajjad.project.AppforNetflix;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Sajjad.project.AppforNetflixfree;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -348,10 +346,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N8UCX7XSTV;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -375,13 +375,12 @@
 				INFOPLIST_KEY_StoreKitWeeklyProductID = "$(STOREKIT_WEEKLY_PRODUCT_ID)";
 				INFOPLIST_KEY_TMDBAPIKey = "$(TMDB_API_KEY)";
 				INFOPLIST_KEY_TermsOfServiceURL = "$(TERMS_OF_SERVICE_URL)";
-				INFOPLIST_KEY_WatchmodeAPIKey = "$(WATCHMODE_API_KEY)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Sajjad.project.AppforNetflix;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Sajjad.project.AppforNetflixfree;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -414,30 +413,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		9AE4157B304C0C0100204B64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 12.18.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		9AE4157D304C0CC500204B64 /* FirebaseAuth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 9AE4157B304C0C0100204B64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAuth;
-		};
-		9AE4157F304C0CC500204B64 /* FirebaseCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 9AE4157B304C0C0100204B64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCore;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9AE41285304C0B5500204B64 /* Project object */;
 }
