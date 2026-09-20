@@ -43,7 +43,7 @@ struct SubscriptionView: View {
         }
         .background(Color(hex: "1D1D1F"))
         .foregroundStyle(.white)
-        .frame(width: 820, height: 620)
+        .frame(width: 820, height: 620  )
         .task {
             await prepareStoreKit()
         }
@@ -351,7 +351,6 @@ struct SubscriptionView: View {
 
                         if let badge = badge(for: plan) {
                             badgeView(text: badge)
-                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
 
@@ -446,6 +445,13 @@ struct SubscriptionView: View {
                     weight: .heavy
                 )
             )
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+            .frame(
+                width: text.contains("TRIAL") ? 66 :
+                    (text.contains("VALUE") ? 43 : nil),
+                alignment: .leading
+            )
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(
@@ -506,8 +512,7 @@ struct SubscriptionView: View {
     }
 
     private func badge(for plan: SubscriptionPlan) -> String? {
-        guard plan == .monthly else { return plan.badge }
-        return storeKit.isMonthlyFreeTrialEligible ? plan.badge : nil
+        plan.badge
     }
 
     private func prepareStoreKit() async {
