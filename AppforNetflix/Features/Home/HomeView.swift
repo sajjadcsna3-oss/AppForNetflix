@@ -322,6 +322,12 @@ struct HomeView: View {
               storeKit.entitlementState != .loading else { return }
 
         hasHandledInitialSubscriptionPresentation = true
+
+        // HomeView is only inserted after RootView finishes the splash screen,
+        // so presenting here keeps the main Netflix UI mounted underneath the
+        // subscription sheet. Existing subscribers should not see the paywall.
+        guard !storeKit.hasPremiumEntitlement else { return }
+        router.showSubscription()
     }
 
     private func seeAllHeader(_ list: SeeAllList) -> some View {

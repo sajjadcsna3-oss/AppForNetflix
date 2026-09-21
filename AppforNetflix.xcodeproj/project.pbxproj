@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9AA30BFD305BF609007BA587 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA30BFC305BF609007BA587 /* StoreKit.framework */; };
+		9ACACF3E30618F55004ABC22 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA30BFC305BF609007BA587 /* StoreKit.framework */; };
 		9AE41584304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9AE41583304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf */; };
 /* End PBXBuildFile section */
 
@@ -30,7 +30,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		9AE4128F304C0B5500204B64 /* AppforNetflix */ = {
+		9ACACE573061052E004ABC22 /* AppforNetflix */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				9AE41582304C0CC500204B64 /* Exceptions for "AppforNetflix" folder in "AppforNetflix" target */,
@@ -45,7 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9AA30BFD305BF609007BA587 /* StoreKit.framework in Frameworks */,
+				9ACACF3E30618F55004ABC22 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -55,7 +55,7 @@
 		9AE41284304C0B5500204B64 = {
 			isa = PBXGroup;
 			children = (
-				9AE4128F304C0B5500204B64 /* AppforNetflix */,
+				9ACACE573061052E004ABC22 /* AppforNetflix */,
 				A1000003304C0CC500204B64 /* Config */,
 				9AE41583304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf */,
 				9AE4157C304C0CC500204B64 /* Frameworks */,
@@ -104,7 +104,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				9AE4128F304C0B5500204B64 /* AppforNetflix */,
+				9ACACE573061052E004ABC22 /* AppforNetflix */,
 			);
 			name = AppforNetflix;
 			packageProductDependencies = (
@@ -296,7 +296,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -347,7 +347,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
