@@ -22,7 +22,10 @@ struct SplashView: View {
                     .opacity(isAnimating ? 1 : 0)
 
                 VStack(spacing: 8) {
-                    Image("AppforNetflixlogo")
+                    Text("APP FOR NETFLIX")
+                        .font(.system(size: 25, weight: .bold, design: .rounded))
+                        .tracking(2.5)
+                        .foregroundStyle(.white)
                         .frame(width: 272, height: 31, alignment: .center)
 
                     Image("AppText")

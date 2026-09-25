@@ -25,7 +25,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9AE4128C304C0B5500204B64"
-               BuildableName = "AppforNetflix.app"
+               BuildableName = "Screen Library.app"
                BlueprintName = "AppforNetflix"
                ReferencedContainer = "container:AppforNetflix.xcodeproj">
             </BuildableReference>
@@ -54,13 +54,13 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9AE4128C304C0B5500204B64"
-            BuildableName = "AppforNetflix.app"
+            BuildableName = "Screen Library.app"
             BlueprintName = "AppforNetflix"
             ReferencedContainer = "container:AppforNetflix.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <StoreKitConfigurationFileReference
-         identifier = "../../AppforNetflix/App for Netflix.storekit">
+         identifier = "../../../AppforNetflix/App for Netflix.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
@@ -74,7 +74,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9AE4128C304C0B5500204B64"
-            BuildableName = "AppforNetflix.app"
+            BuildableName = "Screen Library.app"
             BlueprintName = "AppforNetflix"
             ReferencedContainer = "container:AppforNetflix.xcodeproj">
          </BuildableReference>

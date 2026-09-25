@@ -3,9 +3,8 @@ import SwiftUI
 struct MovieDetailView: View {
     let movie: Movie
     let selectedProviderIDs: Set<Int>
-    let watchlistViewModel: WatchlistViewModel
     let recentViewModel: RecentViewModel
-    let libraryViewModel: LibraryViewModel
+    @ObservedObject var libraryViewModel: LibraryViewModel
 
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var router: AppRouter
@@ -21,13 +20,11 @@ struct MovieDetailView: View {
     init(
         movie: Movie,
         selectedProviderIDs: Set<Int>,
-        watchlistViewModel: WatchlistViewModel,
         recentViewModel: RecentViewModel,
         libraryViewModel: LibraryViewModel
     ) {
         self.movie = movie
         self.selectedProviderIDs = selectedProviderIDs
-        self.watchlistViewModel = watchlistViewModel
         self.recentViewModel = recentViewModel
         self.libraryViewModel = libraryViewModel
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieID: movie.id))
@@ -39,7 +36,7 @@ struct MovieDetailView: View {
 
             // Full-width TMDB backdrop, matching the supplied reference UI.
             GeometryReader { proxy in
-                AsyncImage(url: movie.backdropURL) { phase in
+                AsyncImage(url: displayedMovie.backdropURL) { phase in
                     switch phase {
                     case .success(let image):
                         image
@@ -200,7 +197,8 @@ struct MovieDetailView: View {
             idealHeight: 760
         )
         .onAppear {
-            isSaved = watchlistViewModel.isSaved(movie)
+            isSaved = libraryViewModel.isInMyList(movie)
+            noteText = libraryViewModel.item(for: movie)?.personalNotes ?? ""
             recentViewModel.record(movie)
         }
         .task(id: "\(settings.languageCode)|\(regionCode)") {
@@ -254,7 +252,7 @@ struct MovieDetailView: View {
     }
 
     private func posterImage(width: CGFloat, height: CGFloat) -> some View {
-        AsyncImage(url: movie.posterURL) { phase in
+        AsyncImage(url: displayedMovie.posterURL) { phase in
             switch phase {
             case .success(let image):
                 image.resizable().aspectRatio(contentMode: .fill)
@@ -269,7 +267,7 @@ struct MovieDetailView: View {
 
     private var infoColumn: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(movie.title)
+            Text(displayedMovie.title)
                 .font(Theme.Font.title(36))
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
@@ -282,13 +280,13 @@ struct MovieDetailView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.warning)
 
-                Text(String(format: "%.1f", movie.voteAverage))
+                Text(String(format: "%.1f", displayedMovie.voteAverage))
                     .fontWeight(.bold)
 
                 Text("•").foregroundStyle(.white.opacity(0.3))
-                Text(movie.year)
+                Text(displayedMovie.year)
                 Text("•").foregroundStyle(.white.opacity(0.3))
-                Text(movie.runtimeLabel)
+                Text(displayedMovie.runtimeLabel)
 
                 if !genreLine.isEmpty {
                     Text("•").foregroundStyle(.white.opacity(0.3))
@@ -304,11 +302,11 @@ struct MovieDetailView: View {
                         Image(systemName: "star.fill")
                             .font(.system(size: 13))
                             .foregroundStyle(Theme.warning)
-                        Text(String(format: "%.1f", movie.voteAverage)).fontWeight(.bold)
+                        Text(String(format: "%.1f", displayedMovie.voteAverage)).fontWeight(.bold)
                         Text("•").foregroundStyle(.white.opacity(0.3))
-                        Text(movie.year)
+                        Text(displayedMovie.year)
                         Text("•").foregroundStyle(.white.opacity(0.3))
-                        Text(movie.runtimeLabel)
+                        Text(displayedMovie.runtimeLabel)
                     }
                     if !genreLine.isEmpty {
                         Text(genreLine)
@@ -354,8 +352,8 @@ struct MovieDetailView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    watchlistViewModel.toggle(movie)
-                    isSaved = watchlistViewModel.isSaved(movie)
+                    libraryViewModel.toggleMyList(displayedMovie)
+                    isSaved = libraryViewModel.isInMyList(displayedMovie)
                 } label: {
                     Label(
                         isSaved
@@ -374,11 +372,15 @@ struct MovieDetailView: View {
             }
 
             MovieLibraryControls(
-                movie: movie,
+                movie: displayedMovie,
                 libraryViewModel: libraryViewModel
             )
 
-            Text(movie.overview)
+            collectionMenu
+
+            personalLibraryEditor
+
+            Text(displayedMovie.overview)
                 .font(Theme.Font.body(15))
                 .foregroundStyle(.white.opacity(0.75))
                 .lineSpacing(5)
@@ -387,13 +389,74 @@ struct MovieDetailView: View {
         }
     }
 
+    @State private var noteText = ""
+
+    private var personalLibraryEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Divider().overlay(Color.white.opacity(0.12))
+
+            HStack {
+                Text("My Rating").font(.system(size: 14, weight: .semibold))
+                Picker("My Rating", selection: Binding<Int?>(
+                    get: { libraryViewModel.item(for: displayedMovie)?.personalRating },
+                    set: { libraryViewModel.setPersonalRating($0, for: displayedMovie) }
+                )) {
+                    Text("Not Rated").tag(Int?.none)
+                    ForEach(1...10, id: \.self) { Text("\($0) / 10").tag(Optional($0)) }
+                }
+                .labelsHidden().frame(width: 130)
+            }
+
+            if libraryViewModel.status(for: displayedMovie) == .watching {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack { Text("Watch Progress").font(.system(size: 14, weight: .semibold)); Spacer(); Text("\(Int((libraryViewModel.item(for: displayedMovie)?.watchProgress ?? 0) * 100))%") }
+                    Slider(value: Binding(
+                        get: { libraryViewModel.item(for: displayedMovie)?.watchProgress ?? 0 },
+                        set: { libraryViewModel.setProgress($0, for: displayedMovie) }
+                    ), in: 0...1, step: 0.05)
+                }
+            }
+
+            Text("Personal Notes").font(.system(size: 14, weight: .semibold))
+            TextEditor(text: $noteText)
+                .font(.system(size: 13)).scrollContentBackground(.hidden)
+                .padding(8).frame(minHeight: 70, maxHeight: 110)
+                .background(Color.white.opacity(0.06)).clipShape(RoundedRectangle(cornerRadius: 8))
+            HStack {
+                Button("Save Note") { libraryViewModel.setNotes(noteText, for: displayedMovie) }
+                Button("Delete Note", role: .destructive) { noteText = ""; libraryViewModel.setNotes("", for: displayedMovie) }
+                    .disabled(noteText.isEmpty && (libraryViewModel.item(for: displayedMovie)?.personalNotes.isEmpty ?? true))
+            }
+        }
+        .frame(maxWidth: 620, alignment: .leading)
+    }
+
     private var genreLine: String {
         Genre.all
-            .filter { movie.genreIDs.contains($0.id) }
+            .filter { displayedMovie.genreIDs.contains($0.id) }
             .map {
                 L10n.string($0.name, languageCode: settings.languageCode)
             }
             .joined(separator: " • ")
+    }
+
+    private var displayedMovie: Movie { viewModel.movieDetails ?? movie }
+
+    @ViewBuilder private var collectionMenu: some View {
+        if !libraryViewModel.collections.isEmpty {
+            Menu("Collections") {
+                ForEach(libraryViewModel.collections) { collection in
+                    let included = collection.contains(movieID: displayedMovie.id)
+                    Button {
+                        libraryViewModel.setMovie(displayedMovie, in: collection, included: !included)
+                    } label: {
+                        Label(collection.name, systemImage: included ? "checkmark" : "folder")
+                    }
+                }
+            }
+            .menuStyle(.borderlessButton)
+            .frame(maxWidth: 180, alignment: .leading)
+        }
     }
 
     private var regionCode: String {

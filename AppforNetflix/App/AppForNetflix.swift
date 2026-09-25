@@ -8,7 +8,7 @@ struct AppForNetflix: App {
     @StateObject private var settingsStore = SettingsStore()
     @StateObject private var storeKit = StoreKitService()
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("Screen Library") {
             RootView()
                 .environmentObject(router)
                 .environmentObject(settingsStore)
@@ -34,9 +34,35 @@ struct AppForNetflix: App {
                     }
                 }
         }
-        .modelContainer(for: [WatchlistItem.self, RecentlyViewedItem.self, LibraryItem.self])
+        .modelContainer(for: [WatchlistItem.self, RecentlyViewedItem.self, LibraryItem.self, LibraryCollection.self])
      
         .windowResizability(.contentMinSize)
+        .commands {
+            ScreenLibraryCommands(router: router)
+        }
+    }
+}
+
+extension Notification.Name {
+    static let focusLibrarySearch = Notification.Name("focusLibrarySearch")
+}
+
+private struct ScreenLibraryCommands: Commands {
+    @ObservedObject var router: AppRouter
+
+    var body: some Commands {
+        CommandMenu("Navigate") {
+            Button("Home") { router.select(.home) }
+                .keyboardShortcut("1", modifiers: .command)
+            Button("My Library") { router.select(.watchlist) }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+            Divider()
+            Button("Search") {
+                if router.selectedSection != .watchlist { router.select(.watchlist) }
+                NotificationCenter.default.post(name: .focusLibrarySearch, object: nil)
+            }
+            .keyboardShortcut("f", modifiers: .command)
+        }
     }
 }
 

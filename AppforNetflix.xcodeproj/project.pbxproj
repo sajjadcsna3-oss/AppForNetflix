@@ -13,7 +13,7 @@
 
 /* Begin PBXFileReference section */
 		9AA30BFC305BF609007BA587 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		9AE4128D304C0B5500204B64 /* AppforNetflix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppforNetflix.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AE4128D304C0B5500204B64 /* Screen Library.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Screen Library.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AE41583304C0CC500204B64 /* FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FontSources/Inter,Noto_Sans,Poller_One,Poppins/Poller_One/PollerOne-Regular.ttf"; sourceTree = SOURCE_ROOT; };
 		A1000001304C0CC500204B64 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		A1000002304C0CC500204B64 /* Config.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.example.xcconfig; sourceTree = "<group>"; };
@@ -66,7 +66,7 @@
 		9AE4128E304C0B5500204B64 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				9AE4128D304C0B5500204B64 /* AppforNetflix.app */,
+				9AE4128D304C0B5500204B64 /* Screen Library.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -110,7 +110,7 @@
 			packageProductDependencies = (
 			);
 			productName = AppforNetflix1;
-			productReference = 9AE4128D304C0B5500204B64 /* AppforNetflix.app */;
+			productReference = 9AE4128D304C0B5500204B64 /* Screen Library.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -296,7 +296,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -330,7 +330,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Sajjad.project.AppforNetflixfree;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Screen Library";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -347,7 +347,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -381,7 +381,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Sajjad.project.AppforNetflixfree;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Screen Library";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

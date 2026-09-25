@@ -8,13 +8,11 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     
     @StateObject private var viewModel = HomeViewModel()
-    @StateObject private var watchlistViewModel = WatchlistViewModel()
     @StateObject private var recentViewModel = RecentViewModel()
     @StateObject private var libraryViewModel = LibraryViewModel()
     
     @State private var searchText = ""
     @State private var seeAllList: SeeAllList?
-    @State private var hasHandledInitialSubscriptionPresentation = false
     @State private var isShowingPurchaseSuccess = false
 
     private enum SeeAllList: Identifiable, Equatable {
@@ -41,7 +39,6 @@ struct HomeView: View {
                 switch router.selectedSection {
                 case .watchlist:
                     MyLibraryView(
-                        watchlistViewModel: watchlistViewModel,
                         libraryViewModel: libraryViewModel
                     )
                 case .recent:
@@ -57,10 +54,8 @@ struct HomeView: View {
         .background(Theme.background)
         .foregroundStyle(Theme.textPrimary)
         .task {
-            watchlistViewModel.configure(context: modelContext)
             recentViewModel.configure(context: modelContext)
             libraryViewModel.configure(context: modelContext)
-            presentInitialSubscriptionIfNeeded()
         }
         .task(id: loadContext) {
             await viewModel.load(context: loadContext)
@@ -73,7 +68,6 @@ struct HomeView: View {
             MovieDetailView(
                 movie: movie,
                 selectedProviderIDs: router.presentedProviderIDs,
-                watchlistViewModel: watchlistViewModel,
                 recentViewModel: recentViewModel,
                 libraryViewModel: libraryViewModel
             )
@@ -101,10 +95,6 @@ struct HomeView: View {
             if !searchText.isEmpty {
                 seeAllList = nil
             }
-        }
-        .onChange(of: storeKit.entitlementState) {
-            presentInitialSubscriptionIfNeeded()
-
         }
     }
 
@@ -147,8 +137,7 @@ struct HomeView: View {
                         .padding(.vertical, 16)
                         .zIndex(1)
 
-                    // NEW: lets a new user know why they're seeing everything
-                    connectedPlatformsHint
+                    preferredPlatformsHint
 
                     if searchText.isEmpty && !isPlainHome {
                         PlatformFilterBar(
@@ -184,10 +173,10 @@ struct HomeView: View {
     // NEW: shown only when nothing is connected yet, so the "show
     // everything" fallback doesn't feel like a silent bug to the user.
     @ViewBuilder
-    private var connectedPlatformsHint: some View {
+    private var preferredPlatformsHint: some View {
         if settings.connectedPlatformIDs.isEmpty && searchText.isEmpty {
             Text(L10n.string(
-                "You haven't connected any streaming platforms yet — showing titles from everywhere. Connect platforms in Settings to personalize this.",
+                "No preferred streaming providers selected — showing titles from everywhere. Choose providers in Settings to personalize discovery.",
                 languageCode: settings.languageCode
             ))
             .font(Theme.Font.caption(12))
@@ -230,12 +219,12 @@ struct HomeView: View {
                         movie: featured,
                         onWatch: { showDetails(for: featured) },
                         onToggleWatchlist: {
-                            watchlistViewModel.toggle(featured)
+                            libraryViewModel.toggleMyList(featured)
                         },
                         onInfo: {
                             showDetails(for: featured)
                         },
-                        isSaved: watchlistViewModel.isSaved(featured)
+                        isSaved: libraryViewModel.isInMyList(featured)
                     )
                     .padding(.horizontal, 24)
                 }
@@ -248,8 +237,13 @@ struct HomeView: View {
 
                 MovieRow(
                     title: L10n.string("Continue Watching", languageCode: settings.languageCode),
-                    movies: viewModel.continueWatching,
+                    movies: libraryViewModel.continueWatching.map(libraryViewModel.asMovie),
                     isLandscape: true,
+                    progress: { libraryViewModel.item(for: $0)?.watchProgress },
+                    isInMyList: { libraryViewModel.isInMyList($0) },
+                    isFavorite: { libraryViewModel.isFavorite($0) },
+                    onToggleMyList: { libraryViewModel.toggleMyList($0) },
+                    onToggleFavorite: { libraryViewModel.toggleFavorite($0) },
                     onSelect: {
                         showDetails(for: $0)
                     },
@@ -263,6 +257,10 @@ struct HomeView: View {
                     title: L10n.string("Trending Now", languageCode: settings.languageCode),
                     movies: viewModel.trending,
                     isLandscape: false,
+                    isInMyList: { libraryViewModel.isInMyList($0) },
+                    isFavorite: { libraryViewModel.isFavorite($0) },
+                    onToggleMyList: { libraryViewModel.toggleMyList($0) },
+                    onToggleFavorite: { libraryViewModel.toggleFavorite($0) },
                     onSelect: {
                         showDetails(for: $0)
                     },
@@ -284,8 +282,8 @@ struct HomeView: View {
         case .section(let section):
             router.select(section)
         case .addToWatchlist(let movie):
-            if !watchlistViewModel.isSaved(movie) {
-                watchlistViewModel.toggle(movie)
+            if !libraryViewModel.isInMyList(movie) {
+                libraryViewModel.setStatus(.wantToWatch, for: movie)
             }
         case .enablePlatforms(let providerIDs):
             settings.setConnectedProviderIDs(
@@ -315,19 +313,6 @@ struct HomeView: View {
 
     private var isPremiumUser: Bool {
         storeKit.hasPremiumEntitlement
-    }
-
-    private func presentInitialSubscriptionIfNeeded() {
-        guard !hasHandledInitialSubscriptionPresentation,
-              storeKit.entitlementState != .loading else { return }
-
-        hasHandledInitialSubscriptionPresentation = true
-
-        // HomeView is only inserted after RootView finishes the splash screen,
-        // so presenting here keeps the main Netflix UI mounted underneath the
-        // subscription sheet. Existing subscribers should not see the paywall.
-        guard !storeKit.hasPremiumEntitlement else { return }
-        router.showSubscription()
     }
 
     private func seeAllHeader(_ list: SeeAllList) -> some View {
@@ -385,9 +370,7 @@ struct HomeView: View {
                 spacing: 16
             ) {
                 ForEach(movies) { movie in
-                    MovieCard(movie: movie) {
-                        showDetails(for: movie)
-                    }
+                    libraryMovieCard(movie)
                 }
             }
             .padding(.horizontal, 24)
@@ -398,7 +381,7 @@ struct HomeView: View {
     private func movies(for list: SeeAllList) -> [Movie] {
         switch list {
         case .continueWatching:
-            return viewModel.continueWatching
+            return libraryViewModel.continueWatching.map(libraryViewModel.asMovie)
         case .trending:
             return viewModel.trending
         }
@@ -455,7 +438,10 @@ struct HomeView: View {
                     )
                     .frame(height: 380)
                 } else {
-                    PosterGrid(movies: results) {
+                    PosterGrid(
+                        movies: results,
+                        libraryViewModel: libraryViewModel
+                    ) {
                         showDetails(for: $0)
                     }
                     .padding(.horizontal, 24)
@@ -478,7 +464,7 @@ struct HomeView: View {
 
         if !settings.connectedPlatformIDs.isEmpty {
             return L10n.string(
-                "No titles found on your connected platforms for this filter. Try connecting more platforms in Settings.",
+                "No titles found for your preferred providers. Try selecting more providers in Settings.",
                 languageCode: settings.languageCode
             )
         }
@@ -512,7 +498,10 @@ struct HomeView: View {
             )
             .frame(height: 400)
         } else {
-            PosterGrid(movies: viewModel.searchResults) {
+            PosterGrid(
+                movies: viewModel.searchResults,
+                libraryViewModel: libraryViewModel
+            ) {
                 showDetails(for: $0)
             }
             .padding(24)
@@ -528,10 +517,22 @@ struct HomeView: View {
         }
         router.showDetails(for: movie, providerIDs: providerIDs)
     }
+
+    private func libraryMovieCard(_ movie: Movie) -> some View {
+        MovieCard(
+            movie: movie,
+            isInWatchlist: libraryViewModel.isInMyList(movie),
+            onToggleWatchlist: { libraryViewModel.toggleMyList(movie) },
+            isFavorite: libraryViewModel.isFavorite(movie),
+            onToggleFavorite: { libraryViewModel.toggleFavorite(movie) },
+            onSelect: { showDetails(for: movie) }
+        )
+    }
 }
 
 private struct PosterGrid: View {
     let movies: [Movie]
+    @ObservedObject var libraryViewModel: LibraryViewModel
     var onSelect: (Movie) -> Void
 
     private let columns = [
@@ -541,7 +542,13 @@ private struct PosterGrid: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(movies) { movie in
-                MovieCard(movie: movie) {
+                MovieCard(
+                    movie: movie,
+                    isInWatchlist: libraryViewModel.isInMyList(movie),
+                    onToggleWatchlist: { libraryViewModel.toggleMyList(movie) },
+                    isFavorite: libraryViewModel.isFavorite(movie),
+                    onToggleFavorite: { libraryViewModel.toggleFavorite(movie) }
+                ) {
                     onSelect(movie)
                 }
             }

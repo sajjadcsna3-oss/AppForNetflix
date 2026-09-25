@@ -25,7 +25,6 @@ final class HomeViewModel: ObservableObject {
     }
     
     @Published private(set) var featured: Movie?
-    @Published private(set) var continueWatching: [Movie] = []
     @Published private(set) var trending: [Movie] = []
     @Published private(set) var sectionResults: [Movie] = []
     @Published private(set) var searchResults: [Movie] = []
@@ -62,13 +61,9 @@ final class HomeViewModel: ObservableObject {
     // app never looks empty for a brand-new user.
     private func loadHome(region: String, connectedPlatformIDs: Set<Int>) async throws {
         async let trendingPage = fetchTrending(region: region, connectedPlatformIDs: connectedPlatformIDs)
-        async let nowPlayingPage = fetchNowPlaying(region: region, connectedPlatformIDs: connectedPlatformIDs)
-        
         let trendingResult = try await trendingPage
-        let nowPlayingResult = try await nowPlayingPage
         
         trending = trendingResult.movies
-        continueWatching = Array(nowPlayingResult.movies.prefix(8))
         
         var heroMovie = trendingResult.movies.first ?? .placeholder
         
@@ -90,20 +85,6 @@ final class HomeViewModel: ObservableObject {
             providerIDs: connectedPlatformIDs.sorted(),
             region: region,
             intent: .popular,
-            page: 1
-        )
-        return filtered
-    }
-    
-    // NEW
-    private func fetchNowPlaying(region: String, connectedPlatformIDs: Set<Int>) async throws -> TMDBService.Page {
-        guard !connectedPlatformIDs.isEmpty else {
-            return try await service.nowPlaying(region: region, page: 1)
-        }
-        let filtered = try await service.discover(
-            providerIDs: connectedPlatformIDs.sorted(),
-            region: region,
-            intent: .nowPlaying,
             page: 1
         )
         return filtered
@@ -206,19 +187,17 @@ final class HomeViewModel: ObservableObject {
             return
         }
         searchErrorMessage = nil
-        isSearching = false
+        isSearching = true
+        defer { isSearching = false }
 
-        var seen = Set<Int>()
-        let cachedCatalog = [featured].compactMap { $0 }
-            + continueWatching
-            + trending
-            + sectionResults
-        searchResults = cachedCatalog.filter { movie in
-            seen.insert(movie.id).inserted
-                && movie.title.range(
-                    of: trimmedQuery,
-                    options: [.caseInsensitive, .diacriticInsensitive]
-                ) != nil
+        do {
+            let page = try await service.search(query: trimmedQuery, region: region)
+            guard !Task.isCancelled else { return }
+            searchResults = page.movies
+        } catch {
+            guard !Task.isCancelled else { return }
+            searchResults = []
+            searchErrorMessage = error.localizedDescription
         }
     }
     

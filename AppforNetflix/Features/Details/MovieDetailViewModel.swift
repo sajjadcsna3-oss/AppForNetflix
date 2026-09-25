@@ -6,6 +6,7 @@ final class MovieDetailViewModel: ObservableObject {
     @Published private(set) var platforms: [WatchProvider] = []
     @Published private(set) var cast: [CastMember] = []
     @Published private(set) var similarMovies: [Movie] = []
+    @Published private(set) var movieDetails: Movie?
     @Published private(set) var isLoading = true
     @Published private(set) var providerErrorMessage: String?
 
@@ -25,6 +26,7 @@ final class MovieDetailViewModel: ObservableObject {
         )
         async let creditsRequest = try? service.credits(movieId: movieID)
         async let similarRequest = try? service.similar(movieId: movieID)
+        async let detailsRequest = try? service.details(id: movieID)
 
         let availability: WatchProviderAvailability?
         do {
@@ -34,12 +36,13 @@ final class MovieDetailViewModel: ObservableObject {
             availability = nil
             providerErrorMessage = error.localizedDescription
         }
-        let (credits, similar) = await (creditsRequest, similarRequest)
+        let (credits, similar, details) = await (creditsRequest, similarRequest, detailsRequest)
         guard !Task.isCancelled else { return }
 
         platforms = availability?.providers ?? []
         cast = credits ?? []
         similarMovies = similar ?? []
+        movieDetails = details
         isLoading = false
     }
 }

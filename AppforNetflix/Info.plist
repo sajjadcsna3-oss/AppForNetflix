@@ -51,7 +51,9 @@
 		<string>zh-Hant</string>
 	</array>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>Screen Library</string>
+	<key>CFBundleDisplayName</key>
+	<string>Screen Library</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>

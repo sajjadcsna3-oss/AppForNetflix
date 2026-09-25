@@ -5,7 +5,7 @@ Preparado: 9 de septiembre de 2026
 ## Metadatos indexados
 
 **Nombre de la app (17/30 caracteres)**  
-App for Netflix.™
+Screen Library
 
 **Subtítulo (29/30 caracteres)**  
 Guía de streaming y watchlist
@@ -13,7 +13,7 @@ Guía de streaming y watchlist
 **Palabras clave (99/100 caracteres)**  
 peliculas,cine,donde,ver,buscador,cartelera,estrenos,tendencias,reparto,trailer,actores,proveedores
 
-No se repiten `Netflix`, `streaming`, `guía` ni `watchlist` en el campo de palabras clave porque ya aparecen en el nombre o subtítulo. Apple puede combinar los términos incluidos en los distintos campos indexados.
+No se repiten `streaming`, `guía` ni `watchlist` en el campo de palabras clave porque ya aparecen en el subtítulo o la descripción. Apple puede combinar los términos incluidos en los distintos campos indexados.
 
 ## Metadatos de conversión
 
@@ -24,7 +24,7 @@ Deja de buscar en cada plataforma. Descubre películas, consulta dónde verlas e
 
 Encuentra tu próxima película y descubre dónde verla sin buscar servicio por servicio.
 
-App for Netflix.™ es un buscador de películas, una guía de streaming y una watchlist para Mac. Descubre cine en tendencia, consulta la disponibilidad regional, mira tráilers, conoce el reparto y abre un proveedor disponible.
+Screen Library es una biblioteca personal de películas y una guía de disponibilidad para Mac. Organiza lo que quieres ver, registra tu progreso, añade notas y valoraciones, crea colecciones y descubre cine en tendencia.
 
 Tanto si buscas qué ver en Netflix como si quieres consultar Amazon Prime Video, Disney+, Apple TV+, Hulu, Max, Peacock, Paramount+ o HBO, la app reúne películas y proveedores. La cobertura depende del título, la región y el momento.
 
@@ -77,13 +77,13 @@ Los catálogos cambian entre España, México, Argentina, Estados Unidos y otros
 
 INFORMACIÓN IMPORTANTE
 
-App for Netflix.™ es una guía independiente. No reproduce, aloja, vende, alquila, descarga ni proporciona películas o suscripciones. No es un cliente oficial de ninguna plataforma.
+Screen Library es una guía independiente. No reproduce, aloja, vende, alquila, descarga ni proporciona películas o suscripciones. No es un cliente oficial de ninguna plataforma.
 
 Al seleccionar un proveedor se abre un destino externo. Puede ser necesaria una cuenta, suscripción, compra o alquiler. La disponibilidad, los catálogos y las condiciones pertenecen a terceros y pueden cambiar.
 
 Los datos y las imágenes proceden de la API de TMDB. Este producto utiliza la API de TMDB, pero no está respaldado ni certificado por TMDB. JustWatch proporciona los datos de disponibilidad.
 
-Netflix, Amazon Prime Video, Disney+, Apple TV+, Hulu, Max, Peacock, Paramount+, HBO, TMDB y JustWatch son marcas o nombres de sus respectivos propietarios. App for Netflix.™ es una aplicación independiente y no está afiliada, patrocinada, respaldada ni certificada por Netflix ni por los demás servicios mencionados.
+Los nombres de proveedores, TMDB y JustWatch pertenecen a sus respectivos propietarios. Screen Library es una aplicación independiente y no está afiliada, patrocinada, respaldada ni certificada por ningún proveedor de streaming.
 
 Condiciones de uso: [URL DEFINITIVA DE CONDICIONES]
 Política de privacidad: [URL DEFINITIVA DE PRIVACIDAD]
@@ -123,19 +123,19 @@ Política de privacidad: [URL DEFINITIVA DE PRIVACIDAD]
 
 ## Compras dentro de la app
 
-**App for Netflix.™ Premium mensual**  
+**Screen Library Premium mensual**
 Desbloquea durante un mes la watchlist, el historial reciente, la búsqueda y las funciones avanzadas.
 
-**App for Netflix.™ Premium anual**  
+**Screen Library Premium anual**
 Desbloquea durante un año la watchlist, el historial reciente, la búsqueda y las funciones avanzadas.
 
-**App for Netflix.™ Premium de por vida**  
+**Screen Library Premium de por vida**
 Desbloquea las funciones Premium actuales mediante un único pago.
 
 ## Novedades — Versión 1.0
 
-Te damos la bienvenida a App for Netflix.™, una guía de películas y streaming diseñada para Mac. Descubre tendencias, cartelera, próximos estrenos y películas mejor valoradas; consulta la disponibilidad en tu región; explora reparto, valoraciones y tráilers; y crea tu watchlist Premium.
+Te damos la bienvenida a Screen Library, tu biblioteca personal de películas para Mac. Organiza títulos por estado, registra progreso, notas y valoraciones, crea colecciones y consulta disponibilidad regional, tendencias, reparto y tráilers.
 
 ## Nota sobre el nombre y las marcas
 
-El símbolo ™ no concede por sí mismo derechos sobre el nombre Netflix ni demuestra autorización. Antes de enviar esta ficha, confirma que tienes permiso escrito para usar `Netflix` en el nombre de la app, el icono, las capturas y el binario. Apple puede rechazar nombres o metadatos que utilicen marcas protegidas sin autorización o que sugieran una relación oficial inexistente.
+Antes de enviar, sustituye también las capturas antiguas por capturas actuales que muestren la marca Screen Library y sus funciones de biblioteca local.

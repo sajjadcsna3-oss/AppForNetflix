@@ -47,6 +47,9 @@ struct SubscriptionView: View {
         .task {
             await prepareStoreKit()
         }
+        .onChange(of: storeKit.products.map(\.id)) {
+            selectFirstPurchasablePlanIfNeeded()
+        }
         .alert(
             L10n.string(
                 "Purchase Information",
@@ -232,10 +235,28 @@ struct SubscriptionView: View {
                 }
             }
 
-            if !storeKit.isConfigured {
+            if storeKit.productLoadState == .loading {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    purchaseAvailabilityMessage("Loading purchase options from the App Store…")
+                }
+            } else if !storeKit.isConfigured {
                 purchaseAvailabilityMessage("Purchases are not configured for this build.")
-            } else if let message = storeKit.lastErrorMessage {
-                purchaseAvailabilityMessage(message)
+            } else if let message = storeKit.productLoadErrorMessage {
+                HStack(spacing: 10) {
+                    purchaseAvailabilityMessage(message)
+
+                    Spacer(minLength: 0)
+
+                    Button(L10n.string("Retry", languageCode: settings.languageCode)) {
+                        Task { await retryLoadingProducts() }
+                    }
+                    .buttonStyle(.plain)
+                    .font(Theme.Font.caption(11))
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Theme.accent)
+                    .disabled(storeKit.isLoading)
+                }
             }
 
             Spacer(minLength: 0)
@@ -420,6 +441,8 @@ struct SubscriptionView: View {
             }
         }
         .buttonStyle(.plain)
+        .disabled(storeKit.product(for: plan) == nil)
+        .opacity(storeKit.product(for: plan) == nil ? 0.55 : 1)
     }
 
     // MARK: - Badge
@@ -483,7 +506,7 @@ struct SubscriptionView: View {
     }
 
     private func displayPrice(for plan: SubscriptionPlan) -> String {
-        plan.fallbackDisplayPrice
+        storeKit.product(for: plan)?.displayPrice ?? "—"
     }
 
     private func displayName(for plan: SubscriptionPlan) -> String {
@@ -512,12 +535,26 @@ struct SubscriptionView: View {
     }
 
     private func badge(for plan: SubscriptionPlan) -> String? {
-        plan.badge
+        if plan == .monthly {
+            return storeKit.isMonthlyFreeTrialEligible ? plan.badge : nil
+        }
+
+        return plan.badge
     }
 
     private func prepareStoreKit() async {
 
         await storeKit.prepare()
+
+        selectFirstPurchasablePlanIfNeeded()
+    }
+
+    private func retryLoadingProducts() async {
+        await storeKit.prepare(forceReload: true)
+        selectFirstPurchasablePlanIfNeeded()
+    }
+
+    private func selectFirstPurchasablePlanIfNeeded() {
 
         // Keep Annual selected by default.
         // If Annual is unavailable but another
@@ -541,7 +578,9 @@ struct SubscriptionView: View {
         guard let product = selectedProduct else {
 
             showAlert(
-                "Purchases are not configured for this build."
+                storeKit.productLoadErrorMessage
+                    ?? storeKit.lastErrorMessage
+                    ?? "This purchase is currently unavailable. Please try again."
             )
 
             return

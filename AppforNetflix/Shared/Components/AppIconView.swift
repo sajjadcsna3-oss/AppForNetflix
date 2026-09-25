@@ -12,7 +12,7 @@ import AppKit
 #endif
 
 /// Loads an icon from the asset catalog by name (e.g. "ActionIcon",
-/// "Netflixlogo") and falls back to an SF Symbol if that asset hasn't been
+/// a provider wordmark) and falls back to an SF Symbol if that asset hasn't been
 /// added to the project yet. This means the app still runs and looks
 /// reasonable before every custom icon/logo asset has been dropped in.
 enum AppIcon {

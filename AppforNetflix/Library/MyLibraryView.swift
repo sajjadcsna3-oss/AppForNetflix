@@ -1,420 +1,228 @@
 import SwiftUI
 
 struct MyLibraryView: View {
-
     enum Tab: String, CaseIterable, Identifiable {
+        case allSaved = "All Saved"
         case myList = "My List"
         case watching = "Watching"
         case watched = "Watched"
         case favorites = "Favorites"
-
         var id: String { rawValue }
     }
 
-    @ObservedObject var watchlistViewModel: WatchlistViewModel
     @ObservedObject var libraryViewModel: LibraryViewModel
-
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var settings: SettingsStore
 
-    @State private var selectedTab: Tab = .myList
+    @State private var selectedTab: Tab = .allSaved
+    @State private var searchText = ""
+    @State private var minimumRating = 0
+    @State private var selectedCollectionID: UUID?
+    @State private var isManagingCollections = false
+    @FocusState private var isSearchFocused: Bool
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 250, maximum: 330), spacing: 14)
-    ]
+    private let columns = [GridItem(.adaptive(minimum: 250, maximum: 330), spacing: 14)]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                header
 
-                // MARK: - Header
-
-                VStack(alignment: .leading, spacing: 10) {
-
-                    Text(
-                        L10n.string(
-                            "My Library",
-                            languageCode: settings.languageCode
-                        )
-                    )
-                    .font(Theme.Font.title(28))
-
-                    Picker("", selection: $selectedTab) {
-                        ForEach(Tab.allCases) { tab in
-                            Text(
-                                L10n.string(
-                                    tab.rawValue,
-                                    languageCode: settings.languageCode
-                                )
-                            )
-                            .tag(tab)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 290)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                // MARK: - Content
-
-                Group {
-                    if movies.isEmpty {
-                        EmptyStateView(
-                            icon: emptyIcon,
-                            title: L10n.string(
-                                emptyTitle,
-                                languageCode: settings.languageCode
-                            ),
-                            message: L10n.string(
-                                emptyMessage,
-                                languageCode: settings.languageCode
-                            )
-                        )
+                if filteredItems.isEmpty {
+                    EmptyStateView(icon: emptyIcon, title: emptyTitle, message: emptyMessage)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 380)
-
-                    } else {
-                        LazyVGrid(
-                            columns: columns,
-                            alignment: .leading,
-                            spacing: 14
-                        ) {
-                            ForEach(movies) { movie in
-                                LibraryMovieCard(
-                                    movie: movie,
-                                    tab: selectedTab,
-                                    onOpen: {
-                                        router.showDetails(for: movie)
-                                    },
-                                    onRemove: {
-                                        remove(movie)
-                                    }
-                                )
-                            }
+                } else {
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
+                        ForEach(filteredItems) { item in
+                            LibraryMovieCard(
+                                item: item,
+                                collections: libraryViewModel.collections,
+                                onOpen: { router.showDetails(for: libraryViewModel.asMovie(item)) },
+                                onStatus: { libraryViewModel.setStatus($0, for: libraryViewModel.asMovie(item)) },
+                                onFavorite: { libraryViewModel.toggleFavorite(libraryViewModel.asMovie(item)) },
+                                onCollection: { collection, included in
+                                    libraryViewModel.setMovie(libraryViewModel.asMovie(item), in: collection, included: included)
+                                },
+                                onRemove: { libraryViewModel.remove(libraryViewModel.asMovie(item)) }
+                            )
                         }
                     }
                 }
-                .padding(.top, 24)
             }
             .padding(24)
         }
         .background(Theme.background)
         .foregroundStyle(Theme.textPrimary)
-        .onAppear(perform: refresh)
-        .onChange(of: selectedTab) { _, _ in
-            refresh()
+        .onAppear { libraryViewModel.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: .focusLibrarySearch)) { _ in isSearchFocused = true }
+        .sheet(isPresented: $isManagingCollections) {
+            CollectionManagerView(libraryViewModel: libraryViewModel)
+        }
+        .alert("Library Error", isPresented: Binding(
+            get: { libraryViewModel.persistenceErrorMessage != nil },
+            set: { if !$0 { libraryViewModel.persistenceErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { libraryViewModel.persistenceErrorMessage = nil }
+        } message: {
+            Text(libraryViewModel.persistenceErrorMessage ?? "")
         }
     }
 
-    // MARK: - Movies
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(L10n.string("My Library", languageCode: settings.languageCode))
+                .font(Theme.Font.title(28))
 
-    private var movies: [Movie] {
-        switch selectedTab {
-
-        case .myList:
-            return watchlistViewModel.items.map(
-                watchlistViewModel.asMovie
-            )
-
-        case .watching:
-            return libraryViewModel
-                .items(with: .watching)
-                .map(libraryViewModel.asMovie)
-
-        case .watched:
-            return libraryViewModel
-                .items(with: .watched)
-                .map(libraryViewModel.asMovie)
-
-        case .favorites:
-            return libraryViewModel
-                .favorites
-                .map(libraryViewModel.asMovie)
-        }
-    }
-
-    // MARK: - Refresh
-
-    private func refresh() {
-        watchlistViewModel.refresh()
-        libraryViewModel.refresh()
-    }
-
-    // MARK: - Remove
-
-    private func remove(_ movie: Movie) {
-        switch selectedTab {
-
-        case .myList:
-            if watchlistViewModel.isSaved(movie) {
-                watchlistViewModel.toggle(movie)
+            Picker("", selection: $selectedTab) {
+                ForEach(Tab.allCases) { Text(L10n.string($0.rawValue, languageCode: settings.languageCode)).tag($0) }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 450)
 
-        case .watching, .watched:
-            libraryViewModel.setStatus(
-                .none,
-                for: movie
-            )
+            HStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(Theme.textTertiary)
+                    TextField("Search your library", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .focused($isSearchFocused)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 9)
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .frame(maxWidth: 320)
 
-        case .favorites:
-            if libraryViewModel.isFavorite(movie) {
-                libraryViewModel.toggleFavorite(movie)
+                Picker("Rating", selection: $minimumRating) {
+                    Text("Any rating").tag(0)
+                    ForEach([5, 6, 7, 8, 9, 10], id: \.self) { Text("\($0)+ personal").tag($0) }
+                }
+                .frame(width: 150)
+
+                Picker("Collection", selection: $selectedCollectionID) {
+                    Text("All collections").tag(UUID?.none)
+                    ForEach(libraryViewModel.collections) { Text($0.name).tag(Optional($0.id)) }
+                }
+                .frame(width: 170)
+
+                Button("Manage Collections") { isManagingCollections = true }
+                    .buttonStyle(.bordered)
             }
         }
-
-        refresh()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 24)
     }
 
-    // MARK: - Empty State
-
-    private var emptyIcon: String {
-        switch selectedTab {
-        case .myList:
-            return "bookmark"
-
-        case .watching:
-            return "play.circle"
-
-        case .watched:
-            return "checkmark.circle"
-
-        case .favorites:
-            return "heart"
+    private var filteredItems: [LibraryItem] {
+        libraryViewModel.items.filter { item in
+            let tabMatches: Bool = switch selectedTab {
+            case .allSaved: true
+            case .myList: item.status == .wantToWatch
+            case .watching: item.status == .watching
+            case .watched: item.status == .watched
+            case .favorites: item.isFavorite
+            }
+            let textMatches = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || item.title.localizedStandardContains(searchText)
+            let ratingMatches = minimumRating == 0 || (item.personalRating ?? 0) >= minimumRating
+            let collectionMatches = selectedCollectionID == nil
+                || libraryViewModel.collections.first(where: { $0.id == selectedCollectionID })?.contains(movieID: item.movieID) == true
+            return tabMatches && textMatches && ratingMatches && collectionMatches
         }
     }
 
-    private var emptyTitle: String {
-        switch selectedTab {
-        case .myList:
-            return "Your list is empty"
-
-        case .watching:
-            return "Nothing marked as Watching"
-
-        case .watched:
-            return "Nothing marked as Watched"
-
-        case .favorites:
-            return "No favorites yet"
-        }
-    }
-
-    private var emptyMessage: String {
-        switch selectedTab {
-        case .myList:
-            return "Add movies from Movie Detail using My List."
-
-        case .watching:
-            return "Mark a movie as Watching from Movie Detail."
-
-        case .watched:
-            return "Mark a movie as Watched from Movie Detail."
-
-        case .favorites:
-            return "Favorite a movie from Movie Detail to see it here."
-        }
-    }
+    private var emptyIcon: String { switch selectedTab { case .allSaved: "tray.full"; case .myList: "bookmark"; case .watching: "play.circle"; case .watched: "checkmark.circle"; case .favorites: "heart" } }
+    private var emptyTitle: String { searchText.isEmpty ? "Nothing saved here yet" : "No matching titles" }
+    private var emptyMessage: String { searchText.isEmpty ? "Use Movie Detail or a right-click menu to add and organize titles." : "Try changing your library search or filters." }
 }
 
-// MARK: - Library Movie Card
-
 private struct LibraryMovieCard: View {
-
-    let movie: Movie
-    let tab: MyLibraryView.Tab
+    let item: LibraryItem
+    let collections: [LibraryCollection]
     let onOpen: () -> Void
+    let onStatus: (LibraryStatus) -> Void
+    let onFavorite: () -> Void
+    let onCollection: (LibraryCollection, Bool) -> Void
     let onRemove: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-
-            // MARK: Poster
-
-            AsyncImage(url: movie.posterURL) { phase in
-                switch phase {
-
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-
-                default:
-                    Color.white.opacity(0.06)
-                        .overlay {
-                            Image(systemName: "film")
-                                .foregroundStyle(.secondary)
-                        }
-                }
+            AsyncImage(url: Movie(libraryItem: item).posterURL) { phase in
+                if case .success(let image) = phase { image.resizable().aspectRatio(contentMode: .fill) }
+                else { Color.white.opacity(0.06).overlay { Image(systemName: "film").foregroundStyle(.secondary) } }
             }
-            .frame(width: 76, height: 112)
-            .clipShape(
-                RoundedRectangle(cornerRadius: 7)
-            )
-
-            // MARK: Movie Information
+            .frame(width: 76, height: 112).clipShape(RoundedRectangle(cornerRadius: 7))
 
             VStack(alignment: .leading, spacing: 7) {
-
-                HStack(alignment: .top, spacing: 8) {
-
-                    Text(movie.title)
-                        .font(
-                            .system(
-                                size: 14,
-                                weight: .semibold
-                            )
-                        )
-                        .lineLimit(2)
-
-                    Spacer(minLength: 4)
-
-                    Menu {
-                        Button(
-                            "Open",
-                            action: onOpen
-                        )
-
-                        Button(
-                            "Remove",
-                            role: .destructive,
-                            action: onRemove
-                        )
-
-                    } label: {
-                        Image(systemName: "ellipsis.vertical")
-                            .foregroundStyle(.secondary)
-                            .frame(
-                                width: 20,
-                                height: 20
-                            )
-                    }
-                    .menuStyle(.borderlessButton)
-                }
-
-                // MARK: Rating
-
+                Text(item.title).font(.system(size: 14, weight: .semibold)).lineLimit(2)
                 HStack(spacing: 5) {
-
-                    if !movie.year.isEmpty {
-                        Text(movie.year)
-                            .foregroundStyle(.secondary)
-
-                        Text("•")
-                            .foregroundStyle(
-                                .secondary.opacity(0.7)
-                            )
+                    Image(systemName: "star.fill").foregroundStyle(.yellow)
+                    Text(String(format: "%.1f", item.voteAverage)).foregroundStyle(.secondary)
+                    if let rating = item.personalRating {
+                        Text("• Mine \(rating)/10").foregroundStyle(Theme.accent)
                     }
-
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(.yellow)
-
-                    Text(
-                        String(
-                            format: "%.1f",
-                            movie.voteAverage
-                        )
-                    )
-                    .foregroundStyle(.secondary)
+                }.font(.system(size: 12))
+                Label(item.status.title, systemImage: statusIcon).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                if item.status == .watching {
+                    ProgressView(value: item.watchProgress)
+                    Text("\(Int(item.watchProgress * 100))% watched").font(.caption2).foregroundStyle(.secondary)
                 }
-                .font(.system(size: 12))
-                .lineLimit(1)
-
-                // MARK: Status
-
-                HStack(spacing: 6) {
-
-                    statusIcon
-                        .foregroundStyle(statusColor)
-
-                    Text(statusText)
-                        .foregroundStyle(.secondary)
-
-                    Spacer(minLength: 0)
-                }
-                .font(
-                    .system(
-                        size: 12,
-                        weight: .medium
-                    )
-                )
-
-                Spacer(minLength: 0)
             }
-            .padding(.vertical, 5)
         }
-        .padding(10)
-        .frame(
-            maxWidth: .infinity,
-            minHeight: 132,
-            alignment: .leading
-        )
-        .background(
-            Color.white.opacity(0.045)
-        )
-        .clipShape(
-            RoundedRectangle(cornerRadius: 9)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 9)
-                .stroke(
-                    Color.white.opacity(0.08),
-                    lineWidth: 1
-                )
-        }
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onOpen)
+        .padding(10).frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+        .background(Color.white.opacity(0.045)).clipShape(RoundedRectangle(cornerRadius: 9))
+        .overlay { RoundedRectangle(cornerRadius: 9).stroke(Color.white.opacity(0.08)) }
+        .contentShape(Rectangle()).onTapGesture(perform: onOpen)
+        .contextMenu { libraryMenu }
     }
 
-    // MARK: - Status
-
-    private var statusText: String {
-        switch tab {
-        case .myList:
-            return "In My List"
-
-        case .watching:
-            return "Watching"
-
-        case .watched:
-            return "Watched"
-
-        case .favorites:
-            return "Favorite"
+    @ViewBuilder private var libraryMenu: some View {
+        Button("Open", action: onOpen)
+        Divider()
+        ForEach([LibraryStatus.wantToWatch, .watching, .watched]) { status in
+            Button { onStatus(status) } label: { Label(status.title, systemImage: item.status == status ? "checkmark" : statusIcon(for: status)) }
         }
+        Button(item.isFavorite ? "Unfavorite" : "Favorite", action: onFavorite)
+        if !collections.isEmpty {
+            Menu("Add to Collection") {
+                ForEach(collections) { collection in
+                    let included = collection.contains(movieID: item.movieID)
+                    Button { onCollection(collection, !included) } label: { Label(collection.name, systemImage: included ? "checkmark" : "folder") }
+                }
+            }
+        }
+        Divider()
+        Button("Remove from Library", role: .destructive, action: onRemove)
     }
 
-    private var statusColor: Color {
-        switch tab {
-        case .myList:
-            return .secondary
+    private var statusIcon: String { statusIcon(for: item.status) }
+    private func statusIcon(for status: LibraryStatus) -> String { switch status { case .none: "tray"; case .wantToWatch: "bookmark.fill"; case .watching: "play.circle.fill"; case .watched: "checkmark.circle.fill" } }
+}
 
-        case .watching:
-            return Theme.accent
+private struct CollectionManagerView: View {
+    @ObservedObject var libraryViewModel: LibraryViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var newName = ""
+    @State private var renameValues: [UUID: String] = [:]
 
-        case .watched:
-            return .green
-
-        case .favorites:
-            return .red
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack { Text("Custom Collections").font(Theme.Font.title(22)); Spacer(); Button("Done") { dismiss() } }
+            HStack {
+                TextField("Collection name", text: $newName)
+                Button("Create") { libraryViewModel.createCollection(named: newName); newName = "" }.disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            List {
+                ForEach(libraryViewModel.collections) { collection in
+                    HStack {
+                        TextField(collection.name, text: Binding(get: { renameValues[collection.id] ?? collection.name }, set: { renameValues[collection.id] = $0 }))
+                        Text("\(collection.movieIDs.count) items").foregroundStyle(.secondary)
+                        Button("Rename") { libraryViewModel.rename(collection, to: renameValues[collection.id] ?? collection.name) }
+                        Button("Delete", role: .destructive) { libraryViewModel.delete(collection) }
+                    }
+                }
+            }
         }
-    }
-
-    @ViewBuilder
-    private var statusIcon: some View {
-        switch tab {
-
-        case .myList:
-            Image(systemName: "bookmark.fill")
-
-        case .watching:
-            Image(systemName: "play.circle.fill")
-
-        case .watched:
-            Image(systemName: "checkmark.circle.fill")
-
-        case .favorites:
-            Image(systemName: "heart.fill")
-        }
+        .padding(24).frame(minWidth: 620, minHeight: 380)
     }
 }

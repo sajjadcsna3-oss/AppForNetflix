@@ -27,6 +27,9 @@ final class LibraryItem {
     var voteAverage: Double
     var statusRawValue: String
     var isFavorite: Bool
+    var personalRating: Int?
+    var personalNotes: String = ""
+    var watchProgress: Double = 0
     var updatedAt: Date
 
     var status: LibraryStatus {
@@ -38,6 +41,9 @@ final class LibraryItem {
         movie: Movie,
         status: LibraryStatus = .none,
         isFavorite: Bool = false,
+        personalRating: Int? = nil,
+        personalNotes: String = "",
+        watchProgress: Double = 0,
         updatedAt: Date = .now
     ) {
         movieID = movie.id
@@ -46,6 +52,9 @@ final class LibraryItem {
         voteAverage = movie.voteAverage
         statusRawValue = status.rawValue
         self.isFavorite = isFavorite
+        self.personalRating = personalRating
+        self.personalNotes = personalNotes
+        self.watchProgress = watchProgress
         self.updatedAt = updatedAt
     }
 }

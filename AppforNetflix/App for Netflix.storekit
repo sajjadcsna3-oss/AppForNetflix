@@ -15,7 +15,7 @@
   ],
   "products" : [
     {
-      "displayPrice" : "39.99",
+      "displayPrice" : "49.99",
       "familyShareable" : false,
       "internalID" : "6810966381",
       "localizations" : [
@@ -38,7 +38,7 @@
     "_developerTeamID" : "N8UCX7XSTV",
     "_disableDialogs" : false,
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 811404612.61261404,
+    "_lastSynchronizedDate" : 812010103.51887405,
     "_locale" : "en_US",
     "_renewalBillingIssuesEnabled" : false,
     "_storefront" : "USA",
@@ -62,7 +62,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "29.99",
+          "displayPrice" : "24.99",
           "familyShareable" : false,
           "groupNumber" : 3,
           "internalID" : "6810969192",
@@ -90,15 +90,11 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "7.99",
+          "displayPrice" : "4.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "6810968937",
-          "introductoryOffer" : {
-            "internalID" : "monthly-3-day-trial",
-            "paymentMode" : "FreeTrial",
-            "subscriptionPeriod" : "P3D"
-          },
+          "introductoryOffer" : null,
           "localizations" : [
             {
               "description" : "Monthly auto-renewing access to premium features.",
@@ -122,7 +118,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "3.99",
+          "displayPrice" : "1.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "6810968883",

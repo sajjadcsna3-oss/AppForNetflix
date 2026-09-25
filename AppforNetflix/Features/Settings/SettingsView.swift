@@ -63,7 +63,7 @@ struct SettingsView: View {
                     }
                 }
 
-                section("STREAMING PLATFORMS") {
+                section("PREFERRED STREAMING PROVIDERS") {
                     ForEach(
                         Array(
                             Platform.all.enumerated()

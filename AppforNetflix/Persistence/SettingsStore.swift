@@ -9,9 +9,6 @@ final class SettingsStore: ObservableObject {
     ]
     @Published var region: String { didSet { defaults.set(region, forKey: Keys.region) } }
     @Published var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
-    @Published var videoQuality: String { didSet { defaults.set(videoQuality, forKey: Keys.videoQuality) } }
-    @Published var subtitles: String { didSet { defaults.set(subtitles, forKey: Keys.subtitles) } }
-    @Published var autoplayNext: Bool { didSet { defaults.set(autoplayNext, forKey: Keys.autoplayNext) } }
     /// A display cache updated only from verified StoreKit entitlements.
     @Published private(set) var isPremium: Bool
     @Published var connectedPlatformIDs: Set<Int> { didSet { defaults.set(Array(connectedPlatformIDs), forKey: Keys.connectedPlatforms) } }
@@ -28,10 +25,6 @@ final class SettingsStore: ObservableObject {
     private enum Keys {
         static let region = "settings.region"
         static let language = "settings.language"
-        static let videoQuality = "settings.videoQuality"
-        static let subtitles = "settings.subtitles"
-        static let autoplayNext = "settings.autoplayNext"
-        static let legacyAutoplay = "settings.autoplayTrailers"
         static let connectedPlatforms = "settings.connectedPlatforms"
         static let appearance = "settings.appearance"
         static let selectedPlatform = "settings.selectedPlatformID"
@@ -46,11 +39,6 @@ final class SettingsStore: ObservableObject {
         self.language = AppLanguage.normalizedCode(
             defaults.string(forKey: Keys.language) ?? "en"
         )
-        self.videoQuality = defaults.string(forKey: Keys.videoQuality) ?? "Auto (4K)"
-        self.subtitles = defaults.string(forKey: Keys.subtitles) ?? "Off"
-        self.autoplayNext = defaults.object(forKey: Keys.autoplayNext) as? Bool
-            ?? defaults.object(forKey: Keys.legacyAutoplay) as? Bool
-            ?? true
         self.isPremium = defaults.bool(forKey: Keys.isPremiumUser)
 
         let stored = defaults.array(forKey: Keys.connectedPlatforms) as? [Int]
@@ -145,9 +133,6 @@ final class SettingsStore: ObservableObject {
             setConnectedProviderIDs(
                 connectedPlatformIDs.intersection(Self.freeProviderIDs)
             )
-        }
-        if !isPremium && (videoQuality == "Auto (4K)" || videoQuality == "4K") {
-            videoQuality = "1080p"
         }
     }
 

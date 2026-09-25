@@ -5,6 +5,14 @@ import Combine
 @MainActor
 final class StoreKitService: ObservableObject {
 
+    enum ProductLoadState: Equatable {
+        case idle
+        case loading
+        case loaded
+        case unavailable
+        case failed
+    }
+
     // MARK: - Entitlement State
 
     enum EntitlementState: Equatable {
@@ -65,6 +73,10 @@ final class StoreKitService: ObservableObject {
 
     @Published private(set) var products: [Product] = []
 
+    @Published private(set) var productLoadState: ProductLoadState = .idle
+
+    @Published private(set) var missingProductIDs = Set<String>()
+
     @Published private(set) var purchasedProductIDs = Set<String>()
 
     @Published private(set) var entitlementState: EntitlementState = .loading
@@ -75,6 +87,8 @@ final class StoreKitService: ObservableObject {
 
     @Published private(set) var lastErrorMessage: String?
 
+    @Published private(set) var productLoadErrorMessage: String?
+
     /// True only when Apple's monthly product contains an actual three-day
     /// free-trial introductory offer and the current App Store account is
     /// eligible to redeem it.
@@ -83,6 +97,12 @@ final class StoreKitService: ObservableObject {
     // MARK: - Private Properties
 
     private var updatesTask: Task<Void, Never>?
+
+    /// StoreKit does not guarantee a transaction update at the exact moment
+    /// an auto-renewable subscription expires. Refresh at that boundary so
+    /// premium UI (including the sidebar card) stays correct while the app
+    /// remains open.
+    private var entitlementExpirationTask: Task<Void, Never>?
 
     private var hasPendingPurchase = false
 
@@ -133,6 +153,7 @@ final class StoreKitService: ObservableObject {
 
     deinit {
         updatesTask?.cancel()
+        entitlementExpirationTask?.cancel()
     }
 
     // MARK: - Configuration
@@ -173,7 +194,7 @@ final class StoreKitService: ObservableObject {
 
     // MARK: - Prepare StoreKit
 
-    func prepare() async {
+    func prepare(forceReload: Bool = false) async {
 
         if updatesTask == nil {
             updatesTask = observeTransactionUpdates()
@@ -182,20 +203,36 @@ final class StoreKitService: ObservableObject {
         guard isConfigured else {
 
             products = []
+            missingProductIDs = []
+            productLoadState = .unavailable
             purchasedProductIDs = []
             entitlementState = .notEntitled
             subscriptionStatus = .free
 
             lastErrorMessage =
                 "Purchases are not configured for this build."
+            productLoadErrorMessage = lastErrorMessage
 
             print("❌ STOREKIT NOT CONFIGURED")
 
             return
         }
 
+        // The app prepares StoreKit at launch. Opening the paywall must not
+        // start an identical request again, while an explicit Retry can.
+        if !forceReload {
+            switch productLoadState {
+            case .loading, .loaded:
+                return
+            case .idle, .unavailable, .failed:
+                break
+            }
+        }
+
         isLoading = true
+        productLoadState = .loading
         lastErrorMessage = nil
+        productLoadErrorMessage = nil
 
         defer {
             isLoading = false
@@ -257,6 +294,8 @@ final class StoreKitService: ObservableObject {
                 configuredProductIDs
                     .subtracting(returnedIDs)
 
+            missingProductIDs = missingIDs
+
             if !missingIDs.isEmpty {
 
                 print("")
@@ -289,6 +328,8 @@ final class StoreKitService: ObservableObject {
 
             if fetchedProducts.isEmpty {
 
+                productLoadState = .unavailable
+
                 print("")
                 print("❌ ZERO PRODUCTS RETURNED")
                 print("")
@@ -298,25 +339,35 @@ final class StoreKitService: ObservableObject {
 
                 lastErrorMessage =
                     "Unable to load purchase options. Please try again."
+                productLoadErrorMessage = lastErrorMessage
 
             } else if compatibleProducts.isEmpty {
+
+                productLoadState = .unavailable
 
                 print("")
                 print("❌ PRODUCT TYPE MISMATCH")
 
                 lastErrorMessage =
                     "Purchase configuration is invalid."
+                productLoadErrorMessage = lastErrorMessage
 
             } else if products.count != productIDsByPlan.count {
 
+                productLoadState = .loaded
+
                 lastErrorMessage =
                     "One or more purchases are unavailable. Please try again later."
+                productLoadErrorMessage = lastErrorMessage
 
             } else {
+
+                productLoadState = .loaded
 
                 // All four products loaded successfully.
 
                 lastErrorMessage = nil
+                productLoadErrorMessage = nil
 
                 print("")
                 print("✅ ALL STOREKIT PRODUCTS LOADED")
@@ -324,7 +375,14 @@ final class StoreKitService: ObservableObject {
 
         } catch {
 
-            products = []
+            // Preserve previously loaded products during a transient retry
+            // failure. They are immutable App Store product metadata and
+            // remain safe to purchase through StoreKit.
+            if products.isEmpty {
+                productLoadState = .failed
+            } else {
+                productLoadState = .loaded
+            }
 
             print("")
             print("❌ STOREKIT FETCH THREW AN ERROR")
@@ -336,6 +394,7 @@ final class StoreKitService: ObservableObject {
 
             lastErrorMessage =
                 "Unable to load purchases. Please try again."
+            productLoadErrorMessage = lastErrorMessage
         }
 
         print("")
@@ -448,6 +507,8 @@ final class StoreKitService: ObservableObject {
         subscriptionStatus = .loading
 
         var activeIDs = Set<String>()
+        var nextExpirationDate: Date?
+        let now = Date()
 
         for await result in Transaction.currentEntitlements {
 
@@ -473,9 +534,17 @@ final class StoreKitService: ObservableObject {
 
             if let expirationDate =
                 transaction.expirationDate,
-               expirationDate <= Date() {
+               expirationDate <= now {
 
                 continue
+            }
+
+            if let expirationDate = transaction.expirationDate {
+                if let currentExpiration = nextExpirationDate {
+                    nextExpirationDate = min(currentExpiration, expirationDate)
+                } else {
+                    nextExpirationDate = expirationDate
+                }
             }
 
             activeIDs.insert(
@@ -494,6 +563,35 @@ final class StoreKitService: ObservableObject {
             await resolvedSubscriptionStatus(
                 activeIDs: activeIDs
             )
+
+        scheduleEntitlementRefresh(at: nextExpirationDate)
+    }
+
+    private func scheduleEntitlementRefresh(at expirationDate: Date?) {
+        entitlementExpirationTask?.cancel()
+        entitlementExpirationTask = nil
+
+        guard let expirationDate else {
+            return
+        }
+
+        // Refresh just after the verified StoreKit expiration boundary.
+        let delay = max(0, expirationDate.timeIntervalSinceNow + 1)
+
+        entitlementExpirationTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(delay))
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled, let self else {
+                return
+            }
+
+            self.entitlementExpirationTask = nil
+            await self.refreshEntitlements()
+        }
     }
 
     // MARK: - Subscription Status

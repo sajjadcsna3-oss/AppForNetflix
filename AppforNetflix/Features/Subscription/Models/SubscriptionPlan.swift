@@ -65,19 +65,6 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    var fallbackDisplayPrice: String {
-        switch self {
-        case .weekly:
-            return "$1.99"
-        case .monthly:
-            return "$4.99"
-        case .annual:
-            return "$24.99"
-        case .lifetime:
-            return "$49.99"
-        }
-    }
-
     var badge: String? {
         switch self {
         case .weekly:
@@ -135,23 +122,23 @@ struct PremiumBenefit: Identifiable, Hashable {
     static let all: [PremiumBenefit] = [
 
         PremiumBenefit(
-            title: "All-in-One Search",
-            detail: "Search across all platforms—movies, shows, and documentaries."
+            title: "More Streaming Providers",
+            detail: "Discover movies available from every supported streaming provider."
         ),
 
         PremiumBenefit(
-            title: "Smart Recommendations",
-            detail: "Get personalized picks based on your viewing preferences."
+            title: "Provider Filtering",
+            detail: "Filter movie discovery by your connected streaming providers."
         ),
 
         PremiumBenefit(
-            title: "Global Content Access",
-            detail: "Explore content from any region, anytime."
+            title: "Regional Availability",
+            detail: "Check movie availability for your selected App Store region."
         ),
 
         PremiumBenefit(
-            title: "Ad-Free Experience",
-            detail: "Enjoy uninterrupted browsing with zero ads."
+            title: "Full Library Tools",
+            detail: "Organize movies with statuses, ratings, notes, favorites, and collections."
         )
     ]
 }

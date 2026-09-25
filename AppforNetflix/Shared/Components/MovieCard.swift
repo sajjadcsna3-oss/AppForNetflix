@@ -12,6 +12,8 @@ struct MovieCard: View {
     // get a live "Add/Remove from My List" row in the right-click menu.
     var isInWatchlist: Bool? = nil
     var onToggleWatchlist: (() -> Void)? = nil
+    var isFavorite: Bool? = nil
+    var onToggleFavorite: (() -> Void)? = nil
     var onSelect: () -> Void
 
     @State private var isHovering = false
@@ -87,6 +89,14 @@ struct MovieCard: View {
                     )
                 }
             }
+            if let onToggleFavorite {
+                Button(action: onToggleFavorite) {
+                    Label(
+                        isFavorite == true ? "Remove from Favorites" : "Add to Favorites",
+                        systemImage: isFavorite == true ? "heart.slash" : "heart"
+                    )
+                }
+            }
             Button {
                 copyToPasteboard(movie.title)
             } label: {
@@ -99,6 +109,7 @@ struct MovieCard: View {
 // MARK: - Landscape Card (16:9) — Continue Watching
 struct LandscapeMovieCard: View {
     let movie: Movie
+    var progress: Double? = nil
     var onSelect: () -> Void
 
     @State private var isHovering = false
@@ -131,6 +142,11 @@ struct LandscapeMovieCard: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .padding(10)
+
+                if let progress {
+                    VStack { Spacer(); ProgressView(value: progress).tint(Theme.accent) }
+                        .padding(.horizontal, 10).padding(.bottom, 4)
+                }
             }
             .frame(width: 240, height: 135)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius))
@@ -153,6 +169,11 @@ struct MovieRow: View {
     let title: String
     let movies: [Movie]
     var isLandscape: Bool = false
+    var progress: ((Movie) -> Double?)? = nil
+    var isInMyList: ((Movie) -> Bool)? = nil
+    var isFavorite: ((Movie) -> Bool)? = nil
+    var onToggleMyList: ((Movie) -> Void)? = nil
+    var onToggleFavorite: ((Movie) -> Void)? = nil
     var onSelect: (Movie) -> Void
     var onSeeAll: (() -> Void)? = nil
 
@@ -173,15 +194,30 @@ struct MovieRow: View {
                 }
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
+            if movies.isEmpty && isLandscape {
+                HStack(spacing: 10) {
+                    Image(systemName: "play.circle")
+                    Text("Mark a title as Watching and set progress to continue it here.")
+                }
+                .font(Theme.Font.caption(13)).foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, minHeight: 80, alignment: .leading)
+                .padding(.horizontal, 12)
+                .background(Color.white.opacity(0.035)).clipShape(RoundedRectangle(cornerRadius: 9))
+            } else { ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 16) {
                     ForEach(movies) { movie in
                         if isLandscape {
-                            LandscapeMovieCard(movie: movie) {
+                            LandscapeMovieCard(movie: movie, progress: progress?(movie)) {
                                 onSelect(movie)
                             }
                         } else {
-                            MovieCard(movie: movie) {
+                            MovieCard(
+                                movie: movie,
+                                isInWatchlist: isInMyList?(movie),
+                                onToggleWatchlist: onToggleMyList.map { action in { action(movie) } },
+                                isFavorite: isFavorite?(movie),
+                                onToggleFavorite: onToggleFavorite.map { action in { action(movie) } }
+                            ) {
                                 onSelect(movie)
                             }
                         }
@@ -191,6 +227,7 @@ struct MovieRow: View {
                 .padding(.vertical, 6)
             }
             .frame(height: isLandscape ? 155 : 245)
+            }
         }
     }
 }
